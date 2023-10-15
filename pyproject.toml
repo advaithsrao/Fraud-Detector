@@ -10,8 +10,10 @@ authors = ["Advaith Rao <advaith652@gmail.com>", "Falgun Malhotra <falgun.malhot
 
 [tool.poetry.dependencies]
 python = "^3.9"
+pandas = "^1.1.4"
 numpy = "^1.19.4"
 jupyter = "^1.0.0"
+regex = "*"
 torch = "*"
 
 [tool.ethics]
