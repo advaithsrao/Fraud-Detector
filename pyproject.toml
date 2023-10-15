@@ -3,7 +3,7 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.poetry]
-name = "Ethics"
+name = "ethical-fraud-detector"
 version = "0.1.0"
 description = "A upto-scale fraud-detector package with fine-tuned RoBERTa model trained with ethical considerations"
 authors = ["Advaith Rao <advaith652@gmail.com>", "Falgun Malhotra <falgun.malhotra2@gmail.com", "Vanshita Gupta <vanshigupta04@gmail.com"]
@@ -12,15 +12,16 @@ authors = ["Advaith Rao <advaith652@gmail.com>", "Falgun Malhotra <falgun.malhot
 python = "^3.9"
 numpy = "^1.19.4"
 jupyter = "^1.0.0"
+torch = "*"
 
 [tool.ethics]
 #SMPC packages
-gmpy2 = "*"
-mpyc = {git = "https://github.com/lschoe/mpyc.git", branch = "master"}
+crypten = "*"
 
 [tool.modeling]
 transformers = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0"
+torchvision = "*"
 
