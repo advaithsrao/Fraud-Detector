@@ -1,9 +1,12 @@
-name: Python CI
+name: CICD
 
 on:
   push:
     branches:
-      - main  # Change to your default branch
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
