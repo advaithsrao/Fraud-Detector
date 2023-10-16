@@ -1,0 +1,31 @@
+name: Python CI
+
+on:
+  push:
+    branches:
+      - main  # Change to your default branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9  # Change to your desired Python version
+
+    - name: Install Poetry
+      run: |
+        pip install poetry
+      env:
+        POETRY_HOME: $HOME/.poetry
+        PATH: $HOME/.poetry/bin:$PATH
+
+    - name: Install project dependencies
+      run: |
+        poetry install
+      working-directory: ${{ github.workspace }}
