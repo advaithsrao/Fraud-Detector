@@ -16,6 +16,7 @@ jupyter = "^1.0.0"
 regex = "*"
 email = "6.0.0a1"
 torch = "*"
+scikit-learn = "*"
 
 [tool.ethics]
 #SMPC packages
