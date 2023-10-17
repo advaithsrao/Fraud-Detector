@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import glob
 import email
@@ -6,7 +7,57 @@ from concurrent.futures import ThreadPoolExecutor
 #read config.ini file
 import configparser
 config = configparser.ConfigParser()
-config.read('../config.ini')
+config.read(
+    os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        '../config.ini'
+    )
+)
+
+
+class PersonOfInterest:
+    def __init__(
+        self,
+        name_list: list[str] | None = None,
+        email_list: list[str] | None = None,
+    ):
+        """Class to operate with the person of interest data from config.ini file
+        """
+        self.poi = {}
+
+        #read [person_of_interest_name] and [person_of_interest_email] section from config.ini file if not given explicitly
+        if name_list is None:
+            self.poi['names'] = config['person_of_interest.names']['names']
+        else:
+            self.poi['names'] = name_list
+        
+        if email_list is None:
+            self.poi['emails'] = config['person_of_interest.emails']['emails']
+        else:
+            self.poi['emails'] = email_list
+        
+        #convert the values to lists
+        self.poi['names'] = [name.strip() for name in self.poi['names'].split('&')]
+        self.poi['emails'] = [email.strip() for email in self.poi['emails'].split('&')]
+    
+    def check_person_of_interest_name(
+        self,
+        name: str
+    ):
+        if name in self.poi['names']:
+            return True
+    
+    def check_person_of_interest_email(
+        self,
+        email: str
+    ):  
+        if email in self.poi['emails']:
+            return True
+    
+    def return_person_of_interest(
+        self,
+    ):
+        return self.poi
 
 
 class LoadEnronData:
@@ -17,8 +68,7 @@ class LoadEnronData:
         """Load the Enron email data
 
         Note: 
-            To run this, please specify the local path to enron dataset in config.ini. 
-            Download path for enron dataset: https://www.cs.cmu.edu/~enron/enron_mail_20150507.tar.gz
+            To run this locally
         
         Args:
             datapath (str, optional): Path to the Enron email data. Defaults to None.
