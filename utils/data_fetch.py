@@ -1,3 +1,4 @@
+from typing import List, Optional
 import os
 import pandas as pd
 import glob
@@ -18,8 +19,8 @@ config.read(
 class PersonOfInterest:
     def __init__(
         self,
-        name_list: list[str] | None = None,
-        email_list: list[str] | None = None,
+        name_list: Optional[List[str]] = None,
+        email_list: Optional[List[str]] = None,
     ):
         """Class to operate with the person of interest data from config.ini file
         """
