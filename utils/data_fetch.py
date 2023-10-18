@@ -64,7 +64,7 @@ class PersonOfInterest:
 class LoadEnronData:
     def __call__(
         self,
-        datapath: str | None = None,
+        datapath: Optional[str] = None,
     ):
         """Load the Enron email data
 
