@@ -17,6 +17,8 @@ regex = "*"
 email = "6.0.0a1"
 torch = "*"
 scikit-learn = "*"
+transformers = "*"
+matplotlib = "*"
 
 [tool.ethics]
 #SMPC packages
