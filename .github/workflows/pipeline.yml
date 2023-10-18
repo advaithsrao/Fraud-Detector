@@ -1,4 +1,4 @@
-name: CICD
+name: Fraud Detector CI/CD
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: 3.9  # Change to your desired Python version
+        python-version: 3.9
 
     - name: Install Poetry
       run: |
@@ -31,4 +31,9 @@ jobs:
     - name: Install project dependencies
       run: |
         poetry install
+      working-directory: ${{ github.workspace }}
+
+    - name: Run tests
+      run: |
+        poetry run pytest -v tests/
       working-directory: ${{ github.workspace }}
