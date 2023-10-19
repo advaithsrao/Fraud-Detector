@@ -20,7 +20,7 @@ Fraud Detection Package with fine-tuned RoBERTa model, equipped with ethical con
 
 ## Steps to run
 
-**All helper functions and run steps can be found here: https://github.com/advaithsrao/Fraud-Detector/wiki/Repository-Helpers**
+**All helper functions and run steps can be found here: https://github.com/advaithsrao/Fraud-Detector/wiki/Repository-Helpers in the wiki page.**
 
 ## Abstract
 In today's data-driven landscape, the detection of fraud emails within corporate communications is critical. With email communication still being the most used mode of communication in organizations, hackers over time have found creative ways to bypass several security layers. In 2022 alone, email-based scams have led to losses of over $2.7 billion. 

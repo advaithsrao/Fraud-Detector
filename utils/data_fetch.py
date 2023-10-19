@@ -4,6 +4,8 @@ import pandas as pd
 import glob
 import email
 from concurrent.futures import ThreadPoolExecutor
+import requests
+import tarfile
 
 #read config.ini file
 import configparser
@@ -65,7 +67,7 @@ class LoadEnronData:
     def __call__(
         self,
         datapath: Optional[str] = None,
-    ):
+    ) -> pd.DataFrame:
         """Load the Enron email data
 
         Note: 
@@ -77,23 +79,93 @@ class LoadEnronData:
         Returns:
             email_df (pd.DataFrame): DataFrame containing the email data
         """
+
         self.datapath = datapath
 
         if self.datapath is None:
             self.datapath = config['data']['enron']
+
+        if self.datapath.lower().startswith('http') or self.datapath.lower().startswith('www'):
+            if os.path.exists(
+                os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    '../data/enron/maildir'
+                )
+            ):
+                # If data exists in ../data/enron/, use the data directly
+                self.datapath = os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    '../data/enron/maildir'
+                )
+                pass
+            
+            else:
+                #Download data from URL and proceed
+                print('\x1b[4mLoadEnronData\x1b[0m: Downloading data from online source')
+                
+                #To note here, self.datapath is a web URL from where we download the data
+                os.system(f"wget {self.datapath} -O /tmp/enron.tar.gz")
+
+                self.datapath = os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    '../data/enron/maildir'
+                )
+                
+                #Extract the tar.gz file
+                with tarfile.open("/tmp/enron.tar.gz", "r:gz") as tar:
+                    tar.extractall(self.datapath)
         
-        # Get all the email files
-        files = glob.glob(datapath + "/**/*.", recursive=True)
+        print(f'\x1b[4mLoadEnronData\x1b[0m: Loading data from path: {self.datapath}')
+        
+        #Load all file names
+        # files = glob.glob(os.path.join(self.datapath,"/**/*."), recursive=True)
+        files = self.collect_files_in_directory(self.datapath)
+        
+        print(f'\x1b[4mLoadEnronData\x1b[0m: Load Data Successful')
 
         # Get the email fields
         email_df = self.get_email_df(files)
-
+        
+        print('\x1b[4mLoadEnronData\x1b[0m: Data Successfully loaded into a DataFrame')
+        
         return email_df
+    
+    def collect_files_in_directory(
+            self,
+            root_dir, 
+            extension = '.'
+        ) -> list[str]:
+        """Collect all files in a directory
+
+        Args:
+            root_dir (str): Root directory
+            extension (str, optional): Extension of the files to collect. Defaults to '.'.
+
+        Returns:
+            files (list): List of all files in the directory
+        """
+
+        files = []
+        for dirpath, _, filenames in os.walk(root_dir):
+            for filename in filenames:
+                if filename.endswith('.'):
+                    file_path = os.path.join(dirpath, filename)
+                    files.append(file_path)
+        return files
     
     def process_email(
         self,
         file: str,
-    ):
+    ) -> dict:
+        """Process the email data
+        
+        Args:
+            file (str): Path to the email file
+
+        Returns:
+            email_fields (dict): Dictionary containing the email fields
+        """
+
         email_fields = {}
         folder_user = file.split(self.datapath)[1].split('/')[0]
         folder_name = file.split(self.datapath)[1].split('/')[1]
@@ -111,13 +183,21 @@ class LoadEnronData:
         # Extract the email body
         email_fields['Body'] = msg.get_payload()
 
-        # print(f'Done with user {folder_user} and folder {folder_name}')
         return email_fields
 
     def get_email_df(
         self,
         files
-    ):
+    ) -> pd.DataFrame:
+        """Get the email DataFrame
+
+        Args:
+            files (list): List of all files in the directory
+
+        Returns:
+            email_df (pd.DataFrame): DataFrame containing the email data
+        """
+
         emails = []
 
         with ThreadPoolExecutor(max_workers=8) as executor:  # Adjust max_workers as needed

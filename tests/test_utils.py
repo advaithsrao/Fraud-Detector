@@ -1,3 +1,4 @@
+import os
 import sys
 sys.path.append("..")
 
@@ -5,6 +6,7 @@ import pandas as pd
 import pytest
 from utils.cleanup import Preprocessor
 from utils.data_fetch import PersonOfInterest, LoadEnronData
+
 
 @pytest.fixture
 def example():
