@@ -99,7 +99,7 @@ class LoadEnronData:
         folder_name = file.split(self.datapath)[1].split('/')[1]
 
         email_fields['Folder-User'] = folder_user
-        email_fields['Folder_Name'] = folder_name
+        email_fields['Folder-Name'] = folder_name
 
         with open(file, "rb") as binary_file:
             msg = email.message_from_binary_file(binary_file)
