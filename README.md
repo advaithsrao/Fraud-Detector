@@ -5,7 +5,6 @@ Fraud Detection Package with fine-tuned RoBERTa model, equipped with ethical con
 - [Fraud-Detector](#fraud-detector)
   - [Team](#team)
   - [Steps to run](#steps-to-run)
-    - [Step 1](#step-1)
   - [Abstract](#abstract)
   - [Dataset Description](#dataset-description)
   - [Proposed Methodology](#proposed-methodology)
@@ -21,17 +20,7 @@ Fraud Detection Package with fine-tuned RoBERTa model, equipped with ethical con
 
 ## Steps to run
 
-### Step 1
-
-Create an environment with poetry file
-
-```shell
-pip3 install poetry
-
-poetry install
-
-poetry shell
-```
+**All helper functions and run steps can be found here: https://github.com/advaithsrao/Fraud-Detector/wiki/Repository-Helpers**
 
 ## Abstract
 In today's data-driven landscape, the detection of fraud emails within corporate communications is critical. With email communication still being the most used mode of communication in organizations, hackers over time have found creative ways to bypass several security layers. In 2022 alone, email-based scams have led to losses of over $2.7 billion. 
