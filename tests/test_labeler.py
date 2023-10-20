@@ -5,7 +5,7 @@ sys.path.append("..")
 import pandas as pd
 import pytest
 from utils.data_fetch import LoadEnronData
-from detector.labeler import EnronPipeline
+from detector.labeler import EnronLabeler
 
 @pytest.fixture
 def dataframe():
@@ -20,8 +20,8 @@ def dataframe():
     
     return data
 
-def test_enron_pipeline(dataframe):
-    pipeline = EnronPipeline(dataframe)
+def test_enron_labeler(dataframe):
+    pipeline = EnronLabeler(dataframe)
     assert type(pipeline()) == pd.DataFrame
 
     #individual functions

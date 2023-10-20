@@ -19,7 +19,7 @@ config.read(
 )
 
 
-class EnronPipeline:
+class EnronLabeler:
     """Class to label the enron data
 
     Args:
@@ -93,17 +93,17 @@ class EnronPipeline:
         """
         
         self.data = self.poi_present(self.data)
-        # print(f'\x1b[4mEnronLabeler\x1b[0m: POI Present column added')
+        print(f'\x1b[4mEnronLabeler\x1b[0m: POI Present column added')
 
         self.data = self.suspicious_folder(self.data)
-        # print(f'\x1b[4mEnronLabeler\x1b[0m: Suspicious column added')
+        print(f'\x1b[4mEnronLabeler\x1b[0m: Suspicious column added')
         
         self.data = self.check_sender_type(self.data)
-        # print(f'\x1b[4mEnronLabeler\x1b[0m: Check Sender Type column added')
+        print(f'\x1b[4mEnronLabeler\x1b[0m: Check Sender Type column added')
 
         self.data = self.check_unique_mails_from_sender(self.data)
-        # print(f'\x1b[4mEnronLabeler\x1b[0m: Unique Mails from sender column added')
-        # print(f'\x1b[4mEnronLabeler\x1b[0m: Low Comm column added')
+        print(f'\x1b[4mEnronLabeler\x1b[0m: Unique Mails from sender column added')
+        print(f'\x1b[4mEnronLabeler\x1b[0m: Low Comm column added')
 
         return self.data
 
