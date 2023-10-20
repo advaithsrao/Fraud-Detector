@@ -15,9 +15,16 @@ class Preprocessor:
         Returns:
             text (str): preprocessed text
         """
+
         text = self.remove_new_lines(text)
+        # print(f'\x1b[4mPreprocessor\x1b[0m: Remove New Lines')
+
         text = self.remove_specific_patterns(text)
+        # print(f'\x1b[4mPreprocessor\x1b[0m: Remove Specific Patterns')
+
         text = self.remove_multiple_whitespace(text)
+        # print(f'\x1b[4mPreprocessor\x1b[0m: Remove Whitespaces')
+        
         return text
 
     def remove_new_lines(
