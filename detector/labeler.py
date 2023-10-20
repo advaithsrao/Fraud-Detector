@@ -34,10 +34,10 @@ class EnronPipeline:
     
     def __init__(
         self, 
-        data: pd.DataFrame | None = None,
-        preprocessor: Preprocessor | None = None,
-        person_of_interest: PersonOfInterest | None = None,
-        cfg: configparser.ConfigParser | None = None,
+        data: pd.DataFrame = None,
+        preprocessor: Preprocessor = None,
+        person_of_interest: PersonOfInterest = None,
+        cfg: configparser.ConfigParser = None,
     ):
         
         self.data = data
@@ -235,6 +235,6 @@ class EnronPipeline:
         data['Low-Comm'] = data['Unique-Mails-From-Sender'].apply(
             lambda x: True if x <= 5 else False
         )
-        
+
         return data
     
