@@ -91,17 +91,25 @@ class LoadEnronData:
             if os.path.exists(
                 os.path.join(
                     os.path.dirname(os.path.abspath(__file__)),
-                    '../data/enron/maildir'
+                    '../data/enron/maildir/'
                 )
             ):
                 # If data exists in ../data/enron/, use the data directly
                 self.datapath = os.path.join(
                     os.path.dirname(os.path.abspath(__file__)),
-                    '../data/enron/maildir'
+                    '../data/enron/maildir/'
                 )
                 pass
             
             else:
+                #Since the path doesnt exist, make the folders
+                os.makedirs(
+                    os.path.join(
+                        os.path.dirname(os.path.abspath(__file__)),
+                        '../data/enron/'
+                    )
+                )
+
                 #Download data from URL and proceed
                 print('\x1b[4mLoadEnronData\x1b[0m: Downloading data from online source')
                 
@@ -110,11 +118,8 @@ class LoadEnronData:
 
                 self.datapath = os.path.join(
                     os.path.dirname(os.path.abspath(__file__)),
-                    '../data/enron/maildir'
+                    '../data/enron/maildir/'
                 )
-
-                #Since the path doesnt exist, make the folders
-                os.makedirs(self.datapath)
                 
                 #Extract the tar.gz file
                 with tarfile.open("/tmp/enron.tar.gz", "r:gz") as tar:
@@ -128,6 +133,9 @@ class LoadEnronData:
         #Load all file names
         # files = glob.glob(os.path.join(self.datapath,"/**/*."), recursive=True)
         files = self.collect_files_in_directory(self.datapath)
+
+        print(files[0])
+        print(self.datapath)
         
         print(f'\x1b[4mLoadEnronData\x1b[0m: Load Data Successful')
 
@@ -175,6 +183,7 @@ class LoadEnronData:
         """
 
         email_fields = {}
+
         folder_user = file.split(self.datapath)[1].split('/')[0]
         folder_name = file.split(self.datapath)[1].split('/')[1]
 
