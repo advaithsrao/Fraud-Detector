@@ -64,7 +64,8 @@ def test_person_of_interest():
     assert poi.check_person_of_interest_email('kenneth_lay@enron.net') == True
 
 def test_load_enron_data():
-    data_loader = LoadEnronData(
+    data_loader = LoadEnronData()
+    data = data_loader(
         datapath = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             '../resources/enron/sample'
@@ -72,7 +73,6 @@ def test_load_enron_data():
         try_web=False
     )
     
-    data = data_loader()
     assert type(data) == pd.DataFrame
 
 if __name__ == "__main__":

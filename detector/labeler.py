@@ -76,7 +76,11 @@ class EnronPipeline:
             raise ValueError('Person of interest names not found in the PersonOfInterest object')
         
         self.data['Body'] = self.data['Body'].apply(self.preprocessor)
-        self.data['Cc'] = self.data['Cc'].apply(self.convert_cc_to_list)
+
+        #if Cc column is a string and not (None or list), convert it to list of strings
+        self.data['Cc'] = self.data['Cc'].apply(lambda x: self.convert_cc_to_list(x) if type(x) == str else x)
+
+        print(f'\x1b[4mEnronLabeler\x1b[0m: Initialized Successfully!')
         
     def __call__(
         self
@@ -89,14 +93,24 @@ class EnronPipeline:
         """
         
         self.data = self.poi_present(self.data)
+        # print(f'\x1b[4mEnronLabeler\x1b[0m: POI Present column added')
+
         self.data = self.suspicious_folder(self.data)
+        # print(f'\x1b[4mEnronLabeler\x1b[0m: Suspicious column added')
+        
         self.data = self.check_sender_type(self.data)
+        # print(f'\x1b[4mEnronLabeler\x1b[0m: Check Sender Type column added')
+
         self.data = self.check_unique_mails_from_sender(self.data)
+        # print(f'\x1b[4mEnronLabeler\x1b[0m: Unique Mails from sender column added')
+        # print(f'\x1b[4mEnronLabeler\x1b[0m: Low Comm column added')
+
         return self.data
 
     def convert_cc_to_list(
-        self
-    ) -> list[str] | None:
+        self,
+        text: str,
+    ) -> list[str]:
         """Convert the cc column to list
 
         Args:
@@ -106,16 +120,13 @@ class EnronPipeline:
             list[str] | None: list of cc emails
         """
         
-        if type(text) != str:
-            return text
-        
         text = self.preprocessor(text)
         text = text.split(',')
         return [item.strip() for item in text]
     
     def poi_present(
         self,
-        data: pd.DataFrame | None = None,
+        data: pd.DataFrame = None,
     ) -> pd.DataFrame:
         """Check if person of interest is present in the text
 
@@ -154,8 +165,8 @@ class EnronPipeline:
     
     def suspicious_folder(
         self,
-        data: pd.DataFrame | None = None,
-        config: configparser.ConfigParser | None = None,
+        data: pd.DataFrame = None,
+        config: configparser.ConfigParser = None,
     ) -> pd.DataFrame:
         """Check if the email is in the suspicious folder
 
@@ -181,7 +192,7 @@ class EnronPipeline:
 
     def check_sender_type(
         self,
-        data: pd.DataFrame | None = None,
+        data: pd.DataFrame = None,
     ) -> pd.DataFrame:
         """Check if the sender is internal or external
 
@@ -206,8 +217,8 @@ class EnronPipeline:
     
     def check_unique_mails_from_sender(
         self,
-        data: pd.DataFrame | None = None,
-        unique_mails_dict: dict[str, int] | None = None,
+        data: pd.DataFrame = None,
+        unique_mails_dict: dict[str, int] = None,
     ) -> pd.DataFrame:
         """
         """
@@ -216,17 +227,16 @@ class EnronPipeline:
             data = self.data
         
         if unique_mails_dict is None:
-            try:
-                with open(
-                    os.path.join(
-                        os.path.dirname(os.path.abspath(__file__)),
-                        '../resources/unique_mails_from_sender.json'
-                    ), 
-                    'w'
-                ) as f:
-                    unique_mails_dict = json.load(f)
-            except Exception:
+            dict_path = os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    '../resources/unique_mails_from_sender.json'
+            )
+
+            if not os.path.exists(dict_path):
                 raise ValueError('unique_mails_from_sender.json not found in the resources folder')
+
+            with open(dict_path, 'r') as f:
+                unique_mails_dict = json.load(f)
         
         data['Unique-Mails-From-Sender'] = data['From'].apply(
             lambda x: unique_mails_dict[x] if x in unique_mails_dict.keys() else 0
