@@ -96,7 +96,7 @@ class EnronLabeler:
         print(f'\x1b[4mEnronLabeler\x1b[0m: POI Present column added')
 
         self.data = self.suspicious_folder(self.data)
-        print(f'\x1b[4mEnronLabeler\x1b[0m: Suspicious column added')
+        print(f'\x1b[4mEnronLabeler\x1b[0m: Suspicious Folder column added')
         
         self.data = self.check_sender_type(self.data)
         print(f'\x1b[4mEnronLabeler\x1b[0m: Check Sender Type column added')
