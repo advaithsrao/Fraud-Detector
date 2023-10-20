@@ -67,6 +67,7 @@ class LoadEnronData:
     def __call__(
         self,
         datapath: Optional[str] = None,
+        try_web: Optional[bool] = True,
     ) -> pd.DataFrame:
         """Load the Enron email data
 
@@ -75,6 +76,7 @@ class LoadEnronData:
         
         Args:
             datapath (str, optional): Path to the Enron email data. Defaults to None.
+            try_web (bool, optional): Try to download the data from the web if the data is not found locally. Defaults to True.
 
         Returns:
             email_df (pd.DataFrame): DataFrame containing the email data
@@ -114,6 +116,9 @@ class LoadEnronData:
                 #Extract the tar.gz file
                 with tarfile.open("/tmp/enron.tar.gz", "r:gz") as tar:
                     tar.extractall(self.datapath)
+        
+        if not os.path.exists(self.datapath):
+            raise FileNotFoundError(f'\x1b[4mLoadEnronData\x1b[0m: Data not found at path: {self.datapath}')
         
         print(f'\x1b[4mLoadEnronData\x1b[0m: Loading data from path: {self.datapath}')
         

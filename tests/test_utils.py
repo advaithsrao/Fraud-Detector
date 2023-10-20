@@ -63,9 +63,10 @@ def test_person_of_interest():
     assert poi.check_person_of_interest_name('Lay, Kenneth') == True
     assert poi.check_person_of_interest_email('kenneth_lay@enron.net') == True
 
-# def test_load_enron_data():
-#     data_loader = LoadEnronData()
-#     assert type(data_loader()) == pd.DataFrame
+def test_load_enron_data():
+    data_loader = LoadEnronData()
+    data = data_loader()
+    assert type(data) == pd.DataFrame
 
 if __name__ == "__main__":
     pytest.main()
