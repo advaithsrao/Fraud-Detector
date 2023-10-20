@@ -9,7 +9,14 @@ from detector.labeler import EnronPipeline
 
 @pytest.fixture
 def dataframe():
-    return LoadEnronData(try_web=False)
+    data_loader = LoadEnronData()
+    return data_loader(
+        datapath = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            '../resources/enron/sample'
+        ),
+        try_web=False
+    )
 
 def test_enron_pipeline():
     pipeline = EnronPipeline(dataframe)
