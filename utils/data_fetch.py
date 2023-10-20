@@ -112,6 +112,9 @@ class LoadEnronData:
                     os.path.dirname(os.path.abspath(__file__)),
                     '../data/enron/maildir'
                 )
+
+                #Since the path doesnt exist, make the folders
+                os.makedirs(self.datapath)
                 
                 #Extract the tar.gz file
                 with tarfile.open("/tmp/enron.tar.gz", "r:gz") as tar:
