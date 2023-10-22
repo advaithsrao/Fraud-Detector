@@ -35,17 +35,40 @@ def example():
     \n>\n> I would like to get some of the timing issues resolved prior to
     \n> implementing "No Tag, No Flow."  The problems seem to be isolated, but it
     \n> only takes a single entity to create huge problems for everyone involved.
-    \n>\n>\n> Thanks,
-    \n> Kathy Hara
+    
+    \n>\n>\n> Best,
+    Joe Smith
+    
+    Joe Smith | Strategy & Business Development
+    111 Market St. Suite 111| San Francisco, CA 94103
+    M: 111.111.1111| joe@foobar.com
     """
 
 def test_preprocesor(example):
     preprocess = Preprocessor()
     result = preprocess(example)
     
+    #remove urls
+    assert 'https://www.google.com' not in result
+    
+    #remove html tags
+    assert '<html>' not in result
+    assert '<head>' not in result
+    assert '<body>' not in result
+    assert '<p>' not in result
+    assert '<href' not in result
+    assert '<font' not in result
+    assert '<i>' not in result
+    assert '<b>' not in result
+    assert '<br>' not in result
+    assert '<dl>' not in result
+
     #remove new lines
     assert '\n' not in result
-    
+
+    #remove unicode
+    assert '\x05' not in result
+
     #remove specific patterns
     assert '-+Original Message-+' not in result
     assert 'From:' not in result
@@ -53,12 +76,17 @@ def test_preprocesor(example):
     assert 'To:' not in result
     assert 'Cc:' not in result
     assert 'Subject:' not in result
-    assert '<html>' not in result
-    assert '\x05' not in result
+
+    #remove non-alphanumeric tokens
     assert ' --- ' not in result
-    assert 'https://www.google.com' not in result
+
     #remove multiple whitespace
     assert '  ' not in result
+
+    #remove signature
+    assert 'Joe Smith' not in result
+    assert 'Strategy & Business Development' not in result
+    assert 'M: 111.111.1111| joe@foobar.com' not in result
 
 def test_person_of_interest():
     poi = PersonOfInterest()

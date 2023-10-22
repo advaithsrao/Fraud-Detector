@@ -20,6 +20,14 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: 3.9
+    
+    - name: Set environment variable for scikit-learn depricated package
+      run: echo "SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL=True" >> $GITHUB_ENV
+
+    
+    - name: Upgrade pip
+      run: |
+        pip install --upgrade pip
 
     - name: Install Poetry
       run: |
