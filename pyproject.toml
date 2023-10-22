@@ -34,7 +34,7 @@ plotly = "*"
 gensim = "*"
 
 #ethics packages
-crypten = "*"
+#crypten = "*"
 
 #other packages
 email = "6.0.0a1"
