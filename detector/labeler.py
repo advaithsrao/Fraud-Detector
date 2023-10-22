@@ -81,6 +81,9 @@ class EnronLabeler:
         
         print(f'\x1b[4mEnronLabeler\x1b[0m: Initialized Successfully!')
 
+        self.data.fillna(' ', inplace=True)
+        print(f'\x1b[4mEnronLabeler\x1b[0m: NaN Values replaced with " "')
+
         if 'Subject' in self.data.columns:
             self.data['Body'] = self.data.apply(
                 lambda row:
