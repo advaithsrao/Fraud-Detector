@@ -133,15 +133,10 @@ class LoadEnronData:
         #Load all file names
         # files = glob.glob(os.path.join(self.datapath,"/**/*."), recursive=True)
         files = self.collect_files_in_directory(self.datapath)
-
-        print(files[0])
-        print(self.datapath)
-        
         print(f'\x1b[4mLoadEnronData\x1b[0m: Load Data Successful')
 
         # Get the email fields
         email_df = self.get_email_df(files)
-        
         print('\x1b[4mLoadEnronData\x1b[0m: Data Successfully loaded into a DataFrame')
         
         return email_df

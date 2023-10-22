@@ -6,7 +6,7 @@ import json
 import os
 import pandas as pd
 from utils.data_fetch import LoadEnronData, PersonOfInterest
-from utils.cleanup import Preprocessor
+from utils.cleanup import Preprocessor, add_subject_to_body
 
 #read config.ini file
 import configparser
@@ -75,12 +75,26 @@ class EnronLabeler:
         if 'names' not in self.person_of_interest.keys():
             raise ValueError('Person of interest names not found in the PersonOfInterest object')
         
+        print(f'\x1b[4mEnronLabeler\x1b[0m: Initialized Successfully!')
+
+        if 'Subject' in self.data.columns:
+            self.data['Body'] = self.data.apply(
+                lambda row:
+                    add_subject_to_body(
+                        row['Subject'],
+                        row['Body']
+                    ),
+                axis = 1
+            )
+            print(f'\x1b[4mEnronLabeler\x1b[0m: Appended Subject to Body column')
+        
         self.data['Body'] = self.data['Body'].apply(self.preprocessor)
+        print(f'\x1b[4mEnronLabeler\x1b[0m: Preprocessed Body Column')
 
         #if Cc column is a string and not (None or list), convert it to list of strings
         self.data['Cc'] = self.data['Cc'].apply(lambda x: self.convert_cc_to_list(x) if type(x) == str else x)
 
-        print(f'\x1b[4mEnronLabeler\x1b[0m: Initialized Successfully!')
+        
         
     def __call__(
         self

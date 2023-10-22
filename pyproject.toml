@@ -19,6 +19,12 @@ torch = "*"
 scikit-learn = "*"
 transformers = "*"
 matplotlib = "*"
+seaborn = "*"
+nltk = "*"
+wordcloud = "*"
+plotly = "*"
+gensim = "*"
+html2text = "*"
 
 [tool.ethics]
 #SMPC packages
