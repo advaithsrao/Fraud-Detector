@@ -29,5 +29,7 @@ def test_enron_labeler(dataframe):
     assert type(pipeline.suspicious_folder()) == pd.DataFrame
     assert type(pipeline.check_sender_type()) == pd.DataFrame
     assert type(pipeline.check_unique_mails_from_sender()) == pd.DataFrame
+    assert type(pipeline.contains_replies_forwards()) == pd.DataFrame
+    assert type(pipeline.get_url_count()) == pd.DataFrame
 
 
