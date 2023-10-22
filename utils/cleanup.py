@@ -5,7 +5,10 @@ import numpy as np
 
 from spacy.lang.en import English
 import spacy
+
 from nltk.tokenize import sent_tokenize
+import nltk
+nltk.download('punkt')
 
 def add_subject_to_body(
     subject: str,
