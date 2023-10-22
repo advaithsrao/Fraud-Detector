@@ -52,7 +52,7 @@ class EnronLabeler:
         if self.data is None:
             self.data = LoadEnronData()
         
-        if self.needs_preprocessing and self.preprocessor is None:
+        if self.preprocessor is None:
             self.preprocessor = Preprocessor()
         
         if self.person_of_interest is None:
