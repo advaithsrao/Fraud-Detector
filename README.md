@@ -4,6 +4,7 @@ Fraud Detection Package with fine-tuned RoBERTa model, equipped with ethical con
 
 - [Fraud-Detector](#fraud-detector)
   - [Team](#team)
+  - [CI/CD Pipeline Status](#cicd-pipeline-status)
   - [Steps to run](#steps-to-run)
   - [Abstract](#abstract)
   - [Dataset Description](#dataset-description)
@@ -17,6 +18,10 @@ Fraud Detection Package with fine-tuned RoBERTa model, equipped with ethical con
 |Falgun Malhotra|
 |Hsiao-Chun Hung|
 |Vanshita Gupta|
+
+## CI/CD Pipeline Status
+
+[![Fraud Detector CI/CD](https://github.com/advaithsrao/Fraud-Detector/actions/workflows/pipeline.yml/badge.svg)](https://github.com/advaithsrao/Fraud-Detector/actions/workflows/pipeline.yml)
 
 ## Steps to run
 

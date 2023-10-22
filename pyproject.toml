@@ -14,8 +14,6 @@ python = "^3.8"
 pandas = "^1.1.4"
 numpy = "^1.19.4"
 jupyter = "^1.0.0"
-email = "6.0.0a1"
-html2text = "*"
 
 #detection packages
 scikit-learn = "^1.3.0"
@@ -24,8 +22,8 @@ torch = "1.12.1"
 
 #nlp packages
 regex = "*"
-spacy = "^3.0.0"
-en_core_web_sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.0.0/en_core_web_sm-3.0.0-py3-none-any.whl" } 
+spacy = "^3.7.0"
+en_core_web_sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.0/en_core_web_sm-3.7.0-py3-none-any.whl" } 
 nltk = "*"
 
 #visualization packages
@@ -37,6 +35,10 @@ gensim = "*"
 
 #ethics packages
 crypten = "*"
+
+#other packages
+email = "6.0.0a1"
+html2text = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0"
