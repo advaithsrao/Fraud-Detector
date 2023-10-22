@@ -7,6 +7,7 @@ import os
 import pandas as pd
 from utils.data_fetch import LoadEnronData, PersonOfInterest
 from utils.cleanup import Preprocessor, add_subject_to_body
+import re
 
 #read config.ini file
 import configparser
@@ -93,8 +94,6 @@ class EnronLabeler:
 
         #if Cc column is a string and not (None or list), convert it to list of strings
         self.data['Cc'] = self.data['Cc'].apply(lambda x: self.convert_cc_to_list(x) if type(x) == str else x)
-
-        
         
     def __call__(
         self
@@ -118,6 +117,12 @@ class EnronLabeler:
         self.data = self.check_unique_mails_from_sender(self.data)
         print(f'\x1b[4mEnronLabeler\x1b[0m: Unique Mails from sender column added')
         print(f'\x1b[4mEnronLabeler\x1b[0m: Low Comm column added')
+
+        self.data = self.contains_replies_forwards(self.data)
+        print(f'\x1b[4mEnronLabeler\x1b[0m: Contains Reply Forwards column added')
+        
+        self.data = self.get_url_count(self.data)
+        print(f'\x1b[4mEnronLabeler\x1b[0m: URL Count column added')
 
         return self.data
 
@@ -258,6 +263,66 @@ class EnronLabeler:
         
         data['Low-Comm'] = data['Unique-Mails-From-Sender'].apply(
             lambda x: True if x <= 5 else False
+        )
+
+        return data
+    
+    def contains_replies_forwards(
+        self,
+        data: pd.DataFrame = None
+    ) -> pd.DataFrame:
+        """Check if the email body contains replies and/or forwards
+
+        Args:
+            data (pd.DataFrame, optional): DataFrame containing the enron data. Defaults to None.
+
+        Returns:
+            data (pd.DataFrame): DataFrame containing the enron data with new column 'Contains-Reply-Forwards' 
+            -> True when email body contains replies and/or forwards else False
+        """
+
+        if data is None:
+            data = self.data
+
+        data['Contains-Reply-Forwards'] = data['Body'].apply(
+            lambda x: True \
+                if \
+                    'Re:' in x \
+                    or \
+                    'RE:' in x \
+                    or \
+                    'Fw:' in x \
+                    or \
+                    'FW:' in x \
+                    or \
+                    'Fwd:' in x \
+                    or \
+                    'FWD:' in x \
+                else False
+        )
+
+        return data
+    
+    def get_url_count(
+        self,
+        data: pd.DataFrame = None,
+    ) -> pd.DataFrame:
+        
+        """Get the url count in the email body
+
+        Args:
+            data (pd.DataFrame, optional): DataFrame containing the enron data. Defaults to None.
+
+        Returns:
+            data (pd.DataFrame): DataFrame containing the enron data with new column 'URL-Count' 
+            -> Count of URLs in the email body
+        """
+
+        if data is None:
+            data = self.data
+        
+        data['URL-Count'] = data['Body'].apply(
+            lambda x: len(re.findall(r'<URL>', x))
         )
 
         return data
