@@ -25,6 +25,7 @@ class EnronLabeler:
 
     Args:
         data (pd.DataFrame): DataFrame containing the enron data
+        needs_preprocessing (bool): True if the data needs to be preprocessed else False
         preprocessor (Preprocessor): Preprocessor object to preprocess the text
         person_of_interest (PersonOfInterest): PersonOfInterest object to check if person of interest is present in the text
         cfg (configparser.ConfigParser): ConfigParser object to read config.ini file
@@ -36,12 +37,14 @@ class EnronLabeler:
     def __init__(
         self, 
         data: pd.DataFrame = None,
+        needs_preprocessing: bool = False,
         preprocessor: Preprocessor = None,
         person_of_interest: PersonOfInterest = None,
         cfg: configparser.ConfigParser = None,
     ):
         
         self.data = data
+        self.needs_preprocessing = needs_preprocessing
         self.preprocessor = preprocessor
         self.person_of_interest = person_of_interest
         self.config = cfg
@@ -49,7 +52,7 @@ class EnronLabeler:
         if self.data is None:
             self.data = LoadEnronData()
         
-        if self.preprocessor is None:
+        if self.needs_preprocessing and self.preprocessor is None:
             self.preprocessor = Preprocessor()
         
         if self.person_of_interest is None:
@@ -89,8 +92,9 @@ class EnronLabeler:
             )
             print(f'\x1b[4mEnronLabeler\x1b[0m: Appended Subject to Body column')
         
-        self.data['Body'] = self.data['Body'].apply(self.preprocessor)
-        print(f'\x1b[4mEnronLabeler\x1b[0m: Preprocessed Body Column')
+        if self.needs_preprocessing:
+            self.data['Body'] = self.data['Body'].apply(self.preprocessor)
+            print(f'\x1b[4mEnronLabeler\x1b[0m: Preprocessed Body Column')
 
         #if Cc column is a string and not (None or list), convert it to list of strings
         self.data['Cc'] = self.data['Cc'].apply(lambda x: self.convert_cc_to_list(x) if type(x) == str else x)
@@ -120,7 +124,7 @@ class EnronLabeler:
 
         self.data = self.contains_replies_forwards(self.data)
         print(f'\x1b[4mEnronLabeler\x1b[0m: Contains Reply Forwards column added')
-        
+
         self.data = self.get_url_count(self.data)
         print(f'\x1b[4mEnronLabeler\x1b[0m: URL Count column added')
 

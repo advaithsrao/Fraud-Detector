@@ -195,7 +195,7 @@ class Preprocessor:
     def remove_signatures(
         self,
         text: str, 
-        threshold: float | int =.9
+        threshold: float = .9
     ) -> str:
         """Remove signatures from text
         
