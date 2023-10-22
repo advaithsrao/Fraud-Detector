@@ -31,7 +31,7 @@ plotly = "*"
 gensim = "*"
 
 #detection packages
-scikit-learn = "*"
+scikit-learn = "^1.0.0"
 transformers = "*"
 torch = "*"
 
