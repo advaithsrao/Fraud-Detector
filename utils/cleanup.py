@@ -127,7 +127,7 @@ class Preprocessor:
             text (str): text with unicode characters removed
         """
 
-        return re.sub(r'[^\x00-\x7F]+', '', text)
+        return re.sub(r'[^\x00-\x7F]+', ' ', text)
 
     def remove_specific_patterns(
         self,
@@ -172,7 +172,7 @@ class Preprocessor:
             text (str): text with non-alphanumeric tokens removed
         """
 
-        return re.sub(r'\s[^\w\s]+\s', '', text, flags = re.DOTALL | re.IGNORECASE)
+        return re.sub(r'\s[^\w\s]+\s', ' ', text, flags = re.DOTALL | re.IGNORECASE)
 
     def remove_multiple_whitespace(
         self,
