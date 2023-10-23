@@ -3,8 +3,8 @@ import html2text
 from typing import Any
 import numpy as np
 
-from spacy.lang.en import English
-import spacy
+# from spacy.lang.en import English
+# import spacy
 
 # from nltk.tokenize import sent_tokenize
 # import nltk
