@@ -6,9 +6,9 @@ import numpy as np
 from spacy.lang.en import English
 import spacy
 
-from nltk.tokenize import sent_tokenize
-import nltk
-nltk.download('punkt')
+# from nltk.tokenize import sent_tokenize
+# import nltk
+# nltk.download('punkt')
 
 def add_subject_to_body(
     subject: str,
@@ -51,7 +51,7 @@ class Preprocessor:
         text = self.remove_multiple_whitespace(text)
         # print(f'\x1b[4mPreprocessor\x1b[0m: Remove Whitespaces')
 
-        text = self.remove_signatures(text)
+        # text = self.remove_signatures(text)
         
         return text
 
@@ -195,51 +195,51 @@ class Preprocessor:
     #     text: str,
     # ) -> str:
 
-    def remove_signatures(
-        self,
-        text: str, 
-        threshold: float = .9
-    ) -> str:
-        """Remove signatures from text
+    # def remove_signatures(
+    #     self,
+    #     text: str, 
+    #     threshold: float = .9
+    # ) -> str:
+    #     """Remove signatures from text
         
-        Args:
-            text (str): text to remove signatures from
-            threshold (float | int, optional): Threshold to determine if a sentence is a signature block. Defaults to .9.
+    #     Args:
+    #         text (str): text to remove signatures from
+    #         threshold (float | int, optional): Threshold to determine if a sentence is a signature block. Defaults to .9.
 
-        Returns:
-            text (str): text with signatures removed
-        """
+    #     Returns:
+    #         text (str): text with signatures removed
+    #     """
         
-        output_text = ''
-        pos_tagger = English()  # part-of-speech tagger
-        sentences = sent_tokenize(text)  # convert to sentences
+    #     output_text = ''
+    #     pos_tagger = English()  # part-of-speech tagger
+    #     sentences = sent_tokenize(text)  # convert to sentences
         
-        tagger = spacy.load('en_core_web_sm')
+    #     tagger = spacy.load('en_core_web_sm')
 
-        for sentence in sentences:
-            if self.get_prob_block(sentence, tagger) < threshold:
-                output_text += sentence + '. '
+    #     for sentence in sentences:
+    #         if self.get_prob_block(sentence, tagger) < threshold:
+    #             output_text += sentence + '. '
         
-        return output_text
+    #     return output_text
 
-    def get_prob_block(
-        self,
-        text: str, 
-        pos_tagger: spacy.load('en_core_web_sm')
-    ) -> float:
-        """Calculate probability that a sentence is an email block.
+    # def get_prob_block(
+    #     self,
+    #     text: str, 
+    #     pos_tagger: spacy.load('en_core_web_sm')
+    # ) -> float:
+    #     """Calculate probability that a sentence is an email block.
         
-        https://spacy.io/usage/linguistic-features
+    #     https://spacy.io/usage/linguistic-features
 
-        Args:
-            text (str): text to calculate probability for
-            pos_tagger (spacy.load('en_core_web_sm')): part-of-speech tagger
+    #     Args:
+    #         text (str): text to calculate probability for
+    #         pos_tagger (spacy.load('en_core_web_sm')): part-of-speech tagger
 
-        Returns:
-            (float): probability(signature block | line)
-        """
+    #     Returns:
+    #         (float): probability(signature block | line)
+    #     """
         
-        doc = pos_tagger(text)
-        verb_count = np.sum([token.pos_ != "VERB" for token in doc])
-        return float(verb_count) / len(doc)
+    #     doc = pos_tagger(text)
+    #     verb_count = np.sum([token.pos_ != "VERB" for token in doc])
+    #     return float(verb_count) / len(doc)
     
