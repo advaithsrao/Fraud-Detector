@@ -4,12 +4,12 @@ sys.path.append("..")
 
 import pandas as pd
 import pytest
-from utils.cleanup import Preprocessor
-from utils.data_fetch import PersonOfInterest, LoadEnronData
+from utils.cleanup import Preprocessor, convert_string_to_list, add_subject_to_body
+from utils.data_fetch import PersonOfInterest, LoadEnronData, LoadPhishingData, LoadSocEnggData
 
 
 @pytest.fixture
-def example():
+def mail():
     return """
     \n\n>  -----Original Message-----
     \n> From: \tHara, Kathy
@@ -44,9 +44,32 @@ def example():
     M: 111.111.1111| joe@foobar.com
     """
 
-def test_preprocesor(example):
+@pytest.fixture
+def subject_body():
+    return {
+        'subject': 'Urgent Reply Needed',
+        'body': 'Hello, your Boss here. Quickly send me a gift card, so I can buy some stuff for the customer.'
+    }
+
+@pytest.fixture
+def users_string():
+    return """
+        Lay, Kenneth &&
+        Skilling, Jeff &&
+        Howard, Kevin &&
+        Krautz, Michael &&
+        Yeager, Scott
+    """
+
+def test_subject_body(subject_body):
+    assert add_subject_to_body(subject_body['subject'],subject_body['body']) == 'Urgent Reply Needed Hello, your Boss here. Quickly send me a gift card, so I can buy some stuff for the customer.'
+
+def test_convert_string_to_list(users_string):
+    assert convert_string_to_list(users_string, sep='&&') == ['Lay, Kenneth', 'Skilling, Jeff', 'Howard, Kevin', 'Krautz, Michael', 'Yeager, Scott']
+
+def test_preprocesor(mail):
     preprocess = Preprocessor()
-    result = preprocess(example)
+    result = preprocess(mail)
     
     #remove urls
     assert 'https://www.google.com' not in result
@@ -106,6 +129,18 @@ def test_load_enron_data():
         ),
         try_web=False
     )
+    
+    assert type(data) == pd.DataFrame
+
+def test_load_phishing_data():
+    data_loader = LoadPhishingData()
+    data = data_loader()
+    
+    assert type(data) == pd.DataFrame
+
+def test_load_soc_engg_data():
+    data_loader = LoadSocEnggData()
+    data = data_loader()
     
     assert type(data) == pd.DataFrame
 

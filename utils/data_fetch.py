@@ -1,11 +1,13 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 import os
 import pandas as pd
 import glob
 import email
 from concurrent.futures import ThreadPoolExecutor
-import requests
 import tarfile
+from zipfile import ZipFile
+
+from utils.cleanup import convert_string_to_list
 
 #read config.ini file
 import configparser
@@ -40,8 +42,8 @@ class PersonOfInterest:
             self.poi['emails'] = email_list
         
         #convert the values to lists
-        self.poi['names'] = [name.strip() for name in self.poi['names'].split('&')]
-        self.poi['emails'] = [email.strip() for email in self.poi['emails'].split('&')]
+        self.poi['names'] = convert_string_to_list(self.poi['names'], sep='&')
+        self.poi['emails'] = convert_string_to_list(self.poi['emails'], sep='&')
     
     def check_person_of_interest_name(
         self,
@@ -86,6 +88,8 @@ class LoadEnronData:
 
         if self.datapath is None:
             self.datapath = config['data']['enron']
+        
+        print('\x1b[1m*** Loading Enron Data ***\x1b[0m')
 
         if self.datapath.lower().startswith('http') or self.datapath.lower().startswith('www'):
             if os.path.exists(
@@ -99,9 +103,8 @@ class LoadEnronData:
                     os.path.dirname(os.path.abspath(__file__)),
                     '../data/enron/maildir/'
                 )
-                pass
-            
-            else:
+                        
+            elif try_web:
                 #Since the path doesnt exist, make the folders
                 os.makedirs(
                     os.path.join(
@@ -125,8 +128,9 @@ class LoadEnronData:
                 with tarfile.open("/tmp/enron.tar.gz", "r:gz") as tar:
                     tar.extractall(self.datapath)
         
-        if not os.path.exists(self.datapath):
-            raise FileNotFoundError(f'\x1b[4mLoadEnronData\x1b[0m: Data not found at path: {self.datapath}')
+        else:
+            if not os.path.exists(self.datapath):
+                raise FileNotFoundError(f'\x1b[4mLoadEnronData\x1b[0m: Data not found at path: {self.datapath}')
         
         print(f'\x1b[4mLoadEnronData\x1b[0m: Loading data from path: {self.datapath}')
         
@@ -137,6 +141,9 @@ class LoadEnronData:
 
         # Get the email fields
         email_df = self.get_email_df(files)
+
+        email_df['Source'] = 'Enron Data'
+
         print('\x1b[4mLoadEnronData\x1b[0m: Data Successfully loaded into a DataFrame')
         
         return email_df
@@ -217,3 +224,88 @@ class LoadEnronData:
             emails.extend(results)
 
         return pd.DataFrame(emails)
+
+
+class LoadPhishingData:
+    def __call__(
+        self, 
+        datapath: Optional[str] = None,
+    ) -> pd.DataFrame:
+        """Load the phishing email data
+        
+        Args:
+            datapath (str, optional): Path to the phishing email data. Defaults to None.
+
+        Returns:
+            email_df (pd.DataFrame): DataFrame containing the email data
+        """
+
+        self.datapath = datapath
+
+        if self.datapath is None:
+            self.datapath = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                '../',
+                config['data']['phishing_emails']
+            )
+        
+        print('\x1b[1m*** Loading Phishing Data ***\x1b[0m')
+
+        if not os.path.exists(self.datapath):
+            raise FileNotFoundError(f'\x1b[4mLoadPhishingData\x1b[0m: Data not found at path: {self.datapath}')
+        
+        print(f'\x1b[4mLoadPhishingData\x1b[0m: Loading data from path: {self.datapath}')
+        
+        email_df = pd.read_csv(self.datapath)
+
+        email_df = email_df[['Email Text', 'Email Type']]
+        email_df.rename(columns={'Email Text': 'Body', 'Email Type': 'Label'}, inplace=True)
+        email_df['Source'] = 'Phishing Data'
+
+        email_df = email_df[email_df.Body != 'empty']
+
+        email_df.dropna(inplace=True)
+
+        print('\x1b[4mLoadPhishingData\x1b[0m: Data Successfully loaded into a DataFrame')
+        
+        return email_df
+
+class LoadSocEnggData:
+    def __call__(
+        self, 
+        datapath: Optional[str] = None,
+    ) -> pd.DataFrame:
+        """Load the social engineering email data
+        
+        Args:
+            datapath (str, optional): Path to the social engineering email data. Defaults to None.
+
+        Returns:
+            email_df (pd.DataFrame): DataFrame containing the email data
+        """
+
+        self.datapath = datapath
+
+        if self.datapath is None:
+            self.datapath = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                '../',
+                config['data']['social_engineering_emails']
+            )
+        
+        print('\x1b[1m*** Loading Social Engineering Data ***\x1b[0m')
+
+        if not os.path.exists(self.datapath):
+            raise FileNotFoundError(f'\x1b[4mLoadSocialEngineeringData\x1b[0m: Data not found at path: {self.datapath}')
+        
+        print(f'\x1b[4mLoadSocialEngineeringData\x1b[0m: Loading data from path: {self.datapath}')
+        
+        email_df = pd.read_csv(self.datapath)
+
+        email_df = email_df[['Text', 'Class']]
+        email_df.rename(columns={'Text': 'Body', 'Class': 'Label'}, inplace=True)
+        email_df['Source'] = 'Social Engineering Data'
+
+        print('\x1b[4mLoadSocialEngineeringData\x1b[0m: Data Successfully loaded into a DataFrame')
+        
+        return email_df

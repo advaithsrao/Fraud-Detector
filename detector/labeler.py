@@ -5,9 +5,12 @@ sys.path.append("..")
 import json
 import os
 import pandas as pd
-from utils.data_fetch import LoadEnronData, PersonOfInterest
-from utils.cleanup import Preprocessor, add_subject_to_body
 import re
+import swifter
+from mlflow.sklearn import load_model
+
+from utils.data_fetch import LoadEnronData, PersonOfInterest
+from utils.cleanup import Preprocessor, add_subject_to_body, convert_string_to_list
 
 #read config.ini file
 import configparser
@@ -18,6 +21,32 @@ config.read(
         '../config.ini'
     )
 )
+
+def get_prediction_on_enron(
+    data: pd.Series,
+    model_path: str,
+) -> int:
+    """Predict a model on a row of enron data
+
+    Args:
+        data (pd.Series): Row of enron data
+        model_path (str): Path to the model
+
+    Returns:
+        int: Prediction of the model
+    """
+    
+    model = load_model(
+        os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            model_path
+        )
+    )
+
+    if data['Sender-Type'] == 'External' and data['Contains-Reply-Forwards'] == False and data['Low-Comm'] == True:
+        pred = model.predict([data['Body']])[0]
+        return pred
+    return 0
 
 
 class EnronLabeler:
@@ -80,27 +109,6 @@ class EnronLabeler:
             raise ValueError('Person of interest names not found in the PersonOfInterest object')
         
         print(f'\x1b[4mEnronLabeler\x1b[0m: Initialized Successfully!')
-
-        self.data.fillna(' ', inplace=True)
-        print(f'\x1b[4mEnronLabeler\x1b[0m: NaN Values replaced with " "')
-
-        if 'Subject' in self.data.columns:
-            self.data['Body'] = self.data.apply(
-                lambda row:
-                    add_subject_to_body(
-                        row['Subject'],
-                        row['Body']
-                    ),
-                axis = 1
-            )
-            print(f'\x1b[4mEnronLabeler\x1b[0m: Appended Subject to Body column')
-        
-        if self.needs_preprocessing:
-            self.data['Body'] = self.data['Body'].apply(self.preprocessor)
-            print(f'\x1b[4mEnronLabeler\x1b[0m: Preprocessed Body Column')
-
-        #if Cc column is a string and not (None or list), convert it to list of strings
-        self.data['Cc'] = self.data['Cc'].apply(lambda x: self.convert_cc_to_list(x) if type(x) == str else x)
         
     def __call__(
         self
@@ -111,7 +119,20 @@ class EnronLabeler:
         Returns:
             pd.DataFrame: DataFrame containing the enron data with labels
         """
+
+        self.data.fillna(' ', inplace=True)
+        print(f'\x1b[4mEnronLabeler\x1b[0m: NaN Values replaced with " "')
+
+        self.data = self.concat_subject_body(self.data)
+        print(f'\x1b[4mEnronLabeler\x1b[0m: Appended Subject to Body column')
+
+        if self.needs_preprocessing:
+            self.data['Body'] = self.data['Body'].swifter.apply(self.preprocessor)
+            print(f'\x1b[4mEnronLabeler\x1b[0m: Preprocessed Body Column')
         
+        self.data = self.convert_cc_to_list(self.data)
+        print(f'\x1b[4mEnronLabeler\x1b[0m: Converted CC column to list of values')
+
         self.data = self.poi_present(self.data)
         print(f'\x1b[4mEnronLabeler\x1b[0m: POI Present column added')
 
@@ -128,27 +149,63 @@ class EnronLabeler:
         self.data = self.contains_replies_forwards(self.data)
         print(f'\x1b[4mEnronLabeler\x1b[0m: Contains Reply Forwards column added')
 
-        self.data = self.get_url_count(self.data)
-        print(f'\x1b[4mEnronLabeler\x1b[0m: URL Count column added')
+        # self.data = self.get_url_count(self.data)
+        # print(f'\x1b[4mEnronLabeler\x1b[0m: URL Count column added')
+
+        self.data = self.get_phishing_model_annotation(self.data)
+        print(f'\x1b[4mEnronLabeler\x1b[0m: Phishing Model Annotation column added')
+
+        self.data = self.get_social_engineering_annotation(self.data)
+        print(f'\x1b[4mEnronLabeler\x1b[0m: Social Engineering Annotation column added')
 
         return self.data
 
+    def concat_subject_body(
+        self,
+        data: pd.DataFrame = None,
+    ) -> pd.DataFrame:
+        """Concatenate subject and body columns
+        
+        Args:
+            data (pd.DataFrame, optional): DataFrame containing the enron data. Defaults to None.
+        
+        Returns:
+            data (pd.DataFrame): DataFrame containing the enron data with subject column appended in the body column
+        """
+
+        if data is None:
+            data = self.data
+        
+        data['Body'] = data.swifter.apply(
+            lambda row:
+                add_subject_to_body(
+                    row['Subject'],
+                    row['Body']
+                ),
+            axis = 1
+        )
+
+        return data
+
     def convert_cc_to_list(
         self,
-        text: str,
-    ) -> list[str]:
-        """Convert the cc column to list
+        data: pd.DataFrame = None,
+    ) -> pd.DataFrame:
+        """Convert the cc column to list in enron data
 
         Args:
-            text (str): text to convert to list
+            data (pd.DataFrame, optional): DataFrame containing the enron data. Defaults to None.
 
         Returns:
-            list[str] | None: list of cc emails
+            data (pd.DataFrame): DataFrame containing the enron data with cc column converted to list
         """
         
-        text = self.preprocessor(text)
-        text = text.split(',')
-        return [item.strip() for item in text]
+        if data is None:
+            data = self.data
+        
+        data['Cc'] = data['Cc'].swifter.apply(lambda x: convert_string_to_list(x, sep = ',') if type(x) == str and ',' in x else x)
+        
+        return data
     
     def poi_present(
         self,
@@ -166,7 +223,7 @@ class EnronLabeler:
         if data is None:
             data = self.data
 
-        data['POI-Present'] = data.apply(
+        data['POI-Present'] = data.swifter.apply(
             lambda row:
                 True if row['To'] in self.person_of_interest['emails'] \
                     or (
@@ -212,7 +269,7 @@ class EnronLabeler:
         suspicious_folders = config['folders.possible_fraud']['folders'].split(' & ')
         suspicious_folders = [folder.strip() for folder in suspicious_folders]
 
-        data['Suspicious-Folders'] = data['Folder-Name'].apply(lambda x: True if x in suspicious_folders else False)
+        data['Suspicious-Folders'] = data['Folder-Name'].swifter.apply(lambda x: True if x in suspicious_folders else False)
 
         return data
 
@@ -232,7 +289,7 @@ class EnronLabeler:
         if data is None:
             data = self.data
 
-        data['Sender-Type'] = data['From'].apply(
+        data['Sender-Type'] = data['From'].swifter.apply(
             lambda x: 'Internal' \
                 if '@' in x \
                     and x.split('@')[1].endswith('enron.com')
@@ -264,12 +321,12 @@ class EnronLabeler:
             with open(dict_path, 'r') as f:
                 unique_mails_dict = json.load(f)
         
-        data['Unique-Mails-From-Sender'] = data['From'].apply(
+        data['Unique-Mails-From-Sender'] = data['From'].swifter.apply(
             lambda x: unique_mails_dict[x] if x in unique_mails_dict.keys() else 0
         )
         
-        data['Low-Comm'] = data['Unique-Mails-From-Sender'].apply(
-            lambda x: True if x <= 5 else False
+        data['Low-Comm'] = data['Unique-Mails-From-Sender'].swifter.apply(
+            lambda x: True if x <= 4 else False
         )
 
         return data
@@ -291,7 +348,7 @@ class EnronLabeler:
         if data is None:
             data = self.data
 
-        data['Contains-Reply-Forwards'] = data['Body'].apply(
+        data['Contains-Reply-Forwards'] = data['Body'].swifter.apply(
             lambda x: True \
                 if \
                     'Re:' in x \
@@ -314,7 +371,6 @@ class EnronLabeler:
         self,
         data: pd.DataFrame = None,
     ) -> pd.DataFrame:
-        
         """Get the url count in the email body
 
         Args:
@@ -328,9 +384,54 @@ class EnronLabeler:
         if data is None:
             data = self.data
         
-        data['URL-Count'] = data['Body'].apply(
+        data['URL-Count'] = data['Body'].swifter.apply(
             lambda x: len(re.findall(r'<URL>', x))
         )
 
         return data
     
+    def get_phishing_model_annotation(
+        self,
+        data: pd.DataFrame = None,
+        model_path: str = "../resources/Phishing-Model/"
+    ) -> pd.DataFrame:
+        """Get phishing model prediction
+
+        Args:
+            data (pd.DataFrame, optional): DataFrame containing the enron data. Defaults to None.
+            model_path (str, optional): Path to the phishing model. Defaults to "../resources/Phishing-Model/".
+
+        Returns:
+            data (pd.DataFrame): DataFrame containing the enron data with new column 'Phishing-Model-Prediction' 
+            -> Prediction of the phishing model
+        """
+
+        if data is None:
+            data = self.data
+
+        data['Phishing-Annotation'] = data.swifter.apply(lambda x: get_prediction_on_enron(data = x, model_path=model_path), axis = 1)
+
+        return data
+
+    def get_social_engineering_annotation(
+        self,
+        data: pd.DataFrame = None,
+        model_path: str = "../resources/SocEngg-Model/"
+    ):
+        """Get Social Engineering model prediction
+
+        Args:
+            data (pd.DataFrame, optional): DataFrame containing the enron data. Defaults to None.
+            model_path (str, optional): Path to the social engineering model. Defaults to "../resources/SocEngg-Model/".
+
+        Returns:
+            data (pd.DataFrame): DataFrame containing the enron data with new column 'Social-Engineering-Model-Prediction' 
+            -> Prediction of the social engineering model
+        """
+
+        if data is None:
+            data = self.data
+
+        data['SocEngg-Annotation'] = data.swifter.apply(lambda x: get_prediction_on_enron(data = x, model_path=model_path), axis = 1)
+
+        return data
