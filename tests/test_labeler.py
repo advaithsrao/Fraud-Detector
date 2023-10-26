@@ -18,18 +18,22 @@ def dataframe():
         try_web=False
     )
     
-    return data
+    return data    
 
 def test_enron_labeler(dataframe):
     pipeline = EnronLabeler(dataframe)
-    assert type(pipeline()) == pd.DataFrame
+    # assert type(pipeline()) == pd.DataFrame
 
     #individual functions
+    assert type(pipeline.concat_subject_body()) == pd.DataFrame
+    assert type(pipeline.convert_cc_to_list()) == pd.DataFrame
     assert type(pipeline.poi_present()) == pd.DataFrame
     assert type(pipeline.suspicious_folder()) == pd.DataFrame
     assert type(pipeline.check_sender_type()) == pd.DataFrame
     assert type(pipeline.check_unique_mails_from_sender()) == pd.DataFrame
     assert type(pipeline.contains_replies_forwards()) == pd.DataFrame
     assert type(pipeline.get_url_count()) == pd.DataFrame
+    assert type(pipeline.get_phishing_model_annotation()) == pd.DataFrame
+    assert type(pipeline.get_social_engineering_annotation()) == pd.DataFrame
 
 

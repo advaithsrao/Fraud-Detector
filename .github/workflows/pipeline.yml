@@ -43,5 +43,5 @@ jobs:
 
     - name: Run tests
       run: |
-        poetry run pytest -v tests/
+        poetry run pytest-n 4 -v tests/
       working-directory: ${{ github.workspace }}
