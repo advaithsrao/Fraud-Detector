@@ -1,5 +1,14 @@
 data/fraud_detector_data.csv filter=lfs diff=lfs merge=lfs -text
 data/Social_Engineering_Emails.csv filter=lfs diff=lfs merge=lfs -text
 data/Phishing_Data.csv filter=lfs diff=lfs merge=lfs -text
-resources/Phishing-Model filter=lfs diff=lfs merge=lfs -text
-resources/SocEngg-Model filter=lfs diff=lfs merge=lfs -text
+data/Phishing_Emails.csv filter=lfs diff=lfs merge=lfs -text
+resources/SocEngg-Model/model.pkl filter=lfs diff=lfs merge=lfs -text
+resources/SocEngg-Model/python_env.yaml filter=lfs diff=lfs merge=lfs -text
+resources/SocEngg-Model/requirements.txt filter=lfs diff=lfs merge=lfs -text
+resources/Phishing-Model/MLmodel filter=lfs diff=lfs merge=lfs -text
+resources/Phishing-Model/model.pkl filter=lfs diff=lfs merge=lfs -text
+resources/Phishing-Model/requirements.txt filter=lfs diff=lfs merge=lfs -text
+resources/SocEngg-Model/conda.yaml filter=lfs diff=lfs merge=lfs -text
+resources/Phishing-Model/conda.yaml filter=lfs diff=lfs merge=lfs -text
+resources/Phishing-Model/python_env.yaml filter=lfs diff=lfs merge=lfs -text
+resources/SocEngg-Model/MLmodel filter=lfs diff=lfs merge=lfs -text
