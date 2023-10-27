@@ -384,15 +384,16 @@ class EnronLabeler:
         
         if model_path == '':
             raise ValueError('model_path not provided')
-        elif not os.path.exists(model_path):
+        
+        model_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            model_path
+        )
+
+        if not os.path.exists(model_path):
             raise ValueError(f'{model_path} not found')
         
-        model = load_model(
-            os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                model_path
-            )
-        )
+        model = load_model(model_path)
 
         if data['Sender-Type'] == 'External' and data['Contains-Reply-Forwards'] == False and data['Low-Comm'] == True:
             pred = model.predict([data['Body']])[0]
