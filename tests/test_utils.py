@@ -137,12 +137,16 @@ def test_load_phishing_data():
     data = data_loader()
     
     assert type(data) == pd.DataFrame
+    assert data.columns.tolist() == ['Body', 'Label', 'Source']
+    assert sorted(data.Label.unique().tolist()) == [0, 1]
 
 def test_load_soc_engg_data():
     data_loader = LoadSocEnggData()
     data = data_loader()
     
     assert type(data) == pd.DataFrame
+    assert data.columns.tolist() == ['Body', 'Label', 'Source']
+    assert sorted(data.Label.unique().tolist()) == [0, 1]
 
 if __name__ == "__main__":
     pytest.main()

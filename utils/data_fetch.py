@@ -266,6 +266,10 @@ class LoadPhishingData:
 
         email_df.dropna(inplace=True)
 
+        #map labels
+        email_df['Label'] = email_df['Label'].apply(lambda x: 1 if x == 'Phishing Email' else 0)
+        
+
         print('\x1b[4mLoadPhishingData\x1b[0m: Data Successfully loaded into a DataFrame')
         
         return email_df

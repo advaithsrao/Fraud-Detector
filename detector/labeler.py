@@ -22,32 +22,6 @@ config.read(
     )
 )
 
-def get_prediction_on_enron(
-    data: pd.Series,
-    model_path: str,
-) -> int:
-    """Predict a model on a row of enron data
-
-    Args:
-        data (pd.Series): Row of enron data
-        model_path (str): Path to the model
-
-    Returns:
-        int: Prediction of the model
-    """
-    
-    model = load_model(
-        os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            model_path
-        )
-    )
-
-    if data['Sender-Type'] == 'External' and data['Contains-Reply-Forwards'] == False and data['Low-Comm'] == True:
-        pred = model.predict([data['Body']])[0]
-        return pred
-    return 0
-
 
 class EnronLabeler:
     """Class to label the enron data
@@ -390,6 +364,41 @@ class EnronLabeler:
 
         return data
     
+    def get_prediction_on_enron(
+        self,
+        data: pd.Series = None,
+        model_path: str = '',
+    ) -> int:
+        """Predict a model on a row of enron data
+
+        Args:
+            data (pd.Series): Row of enron data
+            model_path (str): Path to the model
+
+        Returns:
+            int: Prediction of the model
+        """
+        
+        if data is None:
+            data = self.data
+        
+        if model_path == '':
+            raise ValueError('model_path not provided')
+        elif not os.path.exists(model_path):
+            raise ValueError(f'{model_path} not found')
+        
+        model = load_model(
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                model_path
+            )
+        )
+
+        if data['Sender-Type'] == 'External' and data['Contains-Reply-Forwards'] == False and data['Low-Comm'] == True:
+            pred = model.predict([data['Body']])[0]
+            return pred
+        return 0
+    
     def get_phishing_model_annotation(
         self,
         data: pd.DataFrame = None,
@@ -409,7 +418,7 @@ class EnronLabeler:
         if data is None:
             data = self.data
 
-        data['Phishing-Annotation'] = data.swifter.apply(lambda x: get_prediction_on_enron(data = x, model_path=model_path), axis = 1)
+        data['Phishing-Annotation'] = data.swifter.apply(lambda x: self.get_prediction_on_enron(data = x, model_path=model_path), axis = 1)
 
         return data
 
@@ -432,6 +441,31 @@ class EnronLabeler:
         if data is None:
             data = self.data
 
-        data['SocEngg-Annotation'] = data.swifter.apply(lambda x: get_prediction_on_enron(data = x, model_path=model_path), axis = 1)
+        data['SocEngg-Annotation'] = data.swifter.apply(lambda x: self.get_prediction_on_enron(data = x, model_path=model_path), axis = 1)
+
+        return data
+    
+    def get_labels(
+        self,
+        data: pd.DataFrame = None,
+    ) -> pd.DataFrame:
+        """Get the label of the email based on heuristics
+
+        Args:
+            data (pd.DataFrame, optional): DataFrame containing the enron data. Defaults to None.
+
+        Returns:
+            data (pd.DataFrame): DataFrame containing the enron data with new column 'Label' 
+            -> Label of the email
+        """
+
+        if data is None:
+            data = self.data
+
+        data['Label'] = data.swifter.apply(
+            lambda row:
+                1 if row['Phishing-Annotation'] == 1 or row['SocEngg-Annotation'] == 1 else 0,
+            axis = 1
+        )
 
         return data

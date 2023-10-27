@@ -35,5 +35,6 @@ def test_enron_labeler(dataframe):
     assert type(pipeline.get_url_count()) == pd.DataFrame
     assert type(pipeline.get_phishing_model_annotation()) == pd.DataFrame
     assert type(pipeline.get_social_engineering_annotation()) == pd.DataFrame
+    assert type(pipeline.get_labels()) == pd.DataFrame
 
 

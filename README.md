@@ -33,7 +33,13 @@ Fraud Detection Package with fine-tuned RoBERTa model, equipped with ethical con
 
 ## Steps to run
 
-**All helper functions and run steps can be found here: https://github.com/advaithsrao/Fraud-Detector/wiki/Repository-Helpers in the wiki page.**
+**All helper functions and run steps can be found in the wiki pages.**
+
+| Helper | Page |
+| ------ | ------ |
+| Setup Environment | [Wiki](https://github.com/advaithsrao/Fraud-Detector/wiki/Setup-Environment) |
+| Processing and Labeler | [Wiki](https://github.com/advaithsrao/Fraud-Detector/wiki/Load-Preprocessed-and-Labeled-Data) |
+| | |
 
 ***
 
