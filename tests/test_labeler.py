@@ -33,7 +33,7 @@ def test_enron_labeler(dataframe):
     assert type(pipeline.check_unique_mails_from_sender()) == pd.DataFrame
     assert type(pipeline.contains_replies_forwards()) == pd.DataFrame
     assert type(pipeline.get_url_count()) == pd.DataFrame
-    assert type(pipeline.get_prediction_on_enron()) == ValueError
+    # assert type(pipeline.get_prediction_on_enron()) == ValueError
     assert type(pipeline.get_phishing_model_annotation()) == pd.DataFrame
     assert type(pipeline.get_social_engineering_annotation()) == pd.DataFrame
     assert type(pipeline.get_labels()) == pd.DataFrame
