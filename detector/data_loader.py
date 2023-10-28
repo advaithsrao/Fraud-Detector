@@ -1,3 +1,4 @@
+import hashlib
 from typing import Any, List, Optional
 import os
 import pandas as pd
@@ -18,6 +19,21 @@ config.read(
         '../config.ini'
     )
 )
+
+
+def sha256_hash(text):
+    """Hash the text using sha256. We use this for our mail_id column
+
+    Args:
+        text (str): text to hash
+
+    Returns:
+        str: hashed text
+    """
+
+    sha256 = hashlib.sha256()
+    sha256.update(text.encode('utf-8'))
+    return sha256.hexdigest()
 
 
 class PersonOfInterest:
@@ -142,7 +158,10 @@ class LoadEnronData:
         # Get the email fields
         email_df = self.get_email_df(files)
 
+        email_df.dropna(subset=['Body'],inplace=True)
+
         email_df['Source'] = 'Enron Data'
+        email_df['Mail_ID'] = email_df['Body'].apply(sha256_hash)
 
         print('\x1b[4mLoadEnronData\x1b[0m: Data Successfully loaded into a DataFrame')
         
@@ -260,11 +279,13 @@ class LoadPhishingData:
 
         email_df = email_df[['Email Text', 'Email Type']]
         email_df.rename(columns={'Email Text': 'Body', 'Email Type': 'Label'}, inplace=True)
+
+        email_df.dropna(subset=['Body'],inplace=True)
+        
         email_df['Source'] = 'Phishing Data'
+        email_df['Mail_ID'] = email_df['Body'].apply(sha256_hash)
 
         email_df = email_df[email_df.Body != 'empty']
-
-        email_df.dropna(inplace=True)
 
         #map labels
         email_df['Label'] = email_df['Label'].apply(lambda x: 1 if x == 'Phishing Email' else 0)
@@ -308,7 +329,11 @@ class LoadSocEnggData:
 
         email_df = email_df[['Text', 'Class']]
         email_df.rename(columns={'Text': 'Body', 'Class': 'Label'}, inplace=True)
+        
+        email_df.dropna(subset=['Body'],inplace=True)
+
         email_df['Source'] = 'Social Engineering Data'
+        email_df['Mail_ID'] = email_df['Body'].apply(sha256_hash)
 
         print('\x1b[4mLoadSocialEngineeringData\x1b[0m: Data Successfully loaded into a DataFrame')
         

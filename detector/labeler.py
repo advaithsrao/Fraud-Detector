@@ -3,14 +3,15 @@ from typing import Any
 sys.path.append("..")
 
 import json
+import hashlib
 import os
 import pandas as pd
 import re
 import swifter
 from mlflow.sklearn import load_model
 
-from utils.data_fetch import LoadEnronData, PersonOfInterest
 from utils.cleanup import Preprocessor, add_subject_to_body, convert_string_to_list
+from detector.data_loader import LoadEnronData, PersonOfInterest
 
 #read config.ini file
 import configparser
@@ -21,6 +22,7 @@ config.read(
         '../config.ini'
     )
 )
+
 
 
 class EnronLabeler:
@@ -367,13 +369,13 @@ class EnronLabeler:
     def get_prediction_on_enron(
         self,
         data: pd.Series = None,
-        model_path: str = '',
+        model = None,
     ) -> int:
         """Predict a model on a row of enron data
 
         Args:
             data (pd.Series): Row of enron data
-            model_path (str): Path to the model
+            model (sklearn.model): Model to predict on the row of enron data
 
         Returns:
             int: Prediction of the model
@@ -382,18 +384,18 @@ class EnronLabeler:
         if data is None:
             data = self.data
         
-        if model_path == '':
-            raise ValueError('model_path not provided')
+        if model == None:
+            raise ValueError('model not provided')
         
-        model_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            model_path
-        )
+        # model_path = os.path.join(
+        #     os.path.dirname(os.path.abspath(__file__)),
+        #     model_path
+        # )
 
-        if not os.path.exists(model_path):
-            raise ValueError(f'{model_path} not found')
+        # if not os.path.exists(model_path):
+        #     raise ValueError(f'{model_path} not found')
         
-        model = load_model(model_path)
+        # model = load_model(model_path)
 
         if data['Sender-Type'] == 'External' and data['Contains-Reply-Forwards'] == False and data['Low-Comm'] == True:
             pred = model.predict([data['Body']])[0]
@@ -418,8 +420,21 @@ class EnronLabeler:
 
         if data is None:
             data = self.data
+        
+        if model_path == '':
+            raise ValueError('Phishing model_path not provided')
+        
+        model_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            model_path
+        )
 
-        data['Phishing-Annotation'] = data.swifter.apply(lambda x: self.get_prediction_on_enron(data = x, model_path=model_path), axis = 1)
+        if not os.path.exists(model_path):
+            raise ValueError(f'Phishing {model_path} not found')
+        
+        model = load_model(model)
+
+        data['Phishing-Annotation'] = data.swifter.apply(lambda x: self.get_prediction_on_enron(data = x, model = model), axis = 1)
 
         return data
 
@@ -441,8 +456,21 @@ class EnronLabeler:
 
         if data is None:
             data = self.data
+        
+        if model_path == '':
+            raise ValueError('Social Engineering model_path not provided')
+        
+        model_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            model_path
+        )
 
-        data['SocEngg-Annotation'] = data.swifter.apply(lambda x: self.get_prediction_on_enron(data = x, model_path=model_path), axis = 1)
+        if not os.path.exists(model_path):
+            raise ValueError(f'Social Engineering {model_path} not found')
+        
+        model = load_model(model)
+
+        data['SocEngg-Annotation'] = data.swifter.apply(lambda x: self.get_prediction_on_enron(data = x, model = model), axis = 1)
 
         return data
     

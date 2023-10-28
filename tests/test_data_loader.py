@@ -4,8 +4,16 @@ sys.path.append("..")
 
 import pandas as pd
 import pytest
-from utils.cleanup import Preprocessor, convert_string_to_list, add_subject_to_body
+from detector.data_loader import PersonOfInterest, LoadEnronData, LoadPhishingData, LoadSocEnggData, sha256_hash
 
+def test_person_of_interest():
+    poi = PersonOfInterest()
+    assert type(poi.return_person_of_interest()) == dict
+    assert type(poi.return_person_of_interest()['names']) == list
+    assert type(poi.return_person_of_interest()['emails']) == list
+
+    assert poi.check_person_of_interest_name('Lay, Kenneth') == True
+    assert poi.check_person_of_interest_email('kenneth_lay@enron.net') == True
 
 @pytest.fixture
 def mail():
@@ -43,72 +51,37 @@ def mail():
     M: 111.111.1111| joe@foobar.com
     """
 
-@pytest.fixture
-def subject_body():
-    return {
-        'subject': 'Urgent Reply Needed',
-        'body': 'Hello, your Boss here. Quickly send me a gift card, so I can buy some stuff for the customer.'
-    }
+def test_sha256_hash(mail):
+    assert type(sha256_hash(mail)) == str
+    assert len(sha256_hash(mail)) == 64
 
-@pytest.fixture
-def users_string():
-    return """
-        Lay, Kenneth &&
-        Skilling, Jeff &&
-        Howard, Kevin &&
-        Krautz, Michael &&
-        Yeager, Scott
-    """
-
-def test_subject_body(subject_body):
-    assert add_subject_to_body(subject_body['subject'],subject_body['body']) == 'Urgent Reply Needed Hello, your Boss here. Quickly send me a gift card, so I can buy some stuff for the customer.'
-
-def test_convert_string_to_list(users_string):
-    assert convert_string_to_list(users_string, sep='&&') == ['Lay, Kenneth', 'Skilling, Jeff', 'Howard, Kevin', 'Krautz, Michael', 'Yeager, Scott']
-
-def test_preprocesor(mail):
-    preprocess = Preprocessor()
-    result = preprocess(mail)
+def test_load_enron_data():
+    data_loader = LoadEnronData()
+    data = data_loader(
+        datapath = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            '../resources/enron/sample'
+        ),
+        try_web=False
+    )
     
-    #remove urls
-    assert 'https://www.google.com' not in result
+    assert type(data) == pd.DataFrame
+
+def test_load_phishing_data():
+    data_loader = LoadPhishingData()
+    data = data_loader()
     
-    #remove html tags
-    assert '<html>' not in result
-    assert '<head>' not in result
-    assert '<body>' not in result
-    assert '<p>' not in result
-    assert '<href' not in result
-    assert '<font' not in result
-    assert '<i>' not in result
-    assert '<b>' not in result
-    assert '<br>' not in result
-    assert '<dl>' not in result
+    assert type(data) == pd.DataFrame
+    assert data.columns.tolist() == ['Body', 'Label', 'Source', 'Mail_ID']
+    assert sorted(data.Label.unique().tolist()) == [0, 1]
 
-    #remove new lines
-    assert '\n' not in result
-
-    #remove unicode
-    assert '\x05' not in result
-
-    #remove specific patterns
-    assert '-+Original Message-+' not in result
-    assert 'From:' not in result
-    assert 'Sent:' not in result
-    assert 'To:' not in result
-    assert 'Cc:' not in result
-    assert 'Subject:' not in result
-
-    #remove non-alphanumeric tokens
-    assert ' --- ' not in result
-
-    #remove multiple whitespace
-    assert '  ' not in result
-
-    #remove signature
-    assert 'Joe Smith' not in result
-    assert 'Strategy & Business Development' not in result
-    assert 'M: 111.111.1111| joe@foobar.com' not in result
+def test_load_soc_engg_data():
+    data_loader = LoadSocEnggData()
+    data = data_loader()
+    
+    assert type(data) == pd.DataFrame
+    assert data.columns.tolist() == ['Body', 'Label', 'Source', 'Mail_ID']
+    assert sorted(data.Label.unique().tolist()) == [0, 1]
 
 if __name__ == "__main__":
     pytest.main()

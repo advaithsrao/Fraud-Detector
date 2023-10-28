@@ -4,7 +4,7 @@ sys.path.append("..")
 
 import pandas as pd
 import pytest
-from utils.data_fetch import LoadEnronData
+from detector.data_loader import LoadEnronData, sha256_hash
 from detector.labeler import EnronLabeler
 
 @pytest.fixture
@@ -18,7 +18,8 @@ def dataframe():
         try_web=False
     )
     
-    return data    
+    return data  
+
 
 def test_enron_labeler(dataframe):
     pipeline = EnronLabeler(dataframe)
@@ -38,4 +39,5 @@ def test_enron_labeler(dataframe):
     assert type(pipeline.get_social_engineering_annotation()) == pd.DataFrame
     assert type(pipeline.get_labels()) == pd.DataFrame
 
-
+if __name__ == "__main__":
+    pytest.main()
