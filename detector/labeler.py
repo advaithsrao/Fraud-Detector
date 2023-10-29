@@ -134,6 +134,9 @@ class EnronLabeler:
         self.data = self.get_social_engineering_annotation(self.data)
         print(f'\x1b[4mEnronLabeler\x1b[0m: Social Engineering Annotation column added')
 
+        self.data = self.get_labels(self.data)
+        print(f'\x1b[4mEnronLabeler\x1b[0m: Fraud Labels added')
+
         return self.data
 
     def concat_subject_body(
