@@ -432,7 +432,7 @@ class EnronLabeler:
         if not os.path.exists(model_path):
             raise ValueError(f'Phishing {model_path} not found')
         
-        model = load_model(model)
+        model = load_model(model_path)
 
         data['Phishing-Annotation'] = data.swifter.apply(lambda x: self.get_prediction_on_enron(data = x, model = model), axis = 1)
 
@@ -468,7 +468,7 @@ class EnronLabeler:
         if not os.path.exists(model_path):
             raise ValueError(f'Social Engineering {model_path} not found')
         
-        model = load_model(model)
+        model = load_model(model_path)
 
         data['SocEngg-Annotation'] = data.swifter.apply(lambda x: self.get_prediction_on_enron(data = x, model = model), axis = 1)
 

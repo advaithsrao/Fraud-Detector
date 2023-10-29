@@ -161,7 +161,7 @@ class LoadEnronData:
         email_df.dropna(subset=['Body'],inplace=True)
 
         email_df['Source'] = 'Enron Data'
-        email_df['Mail_ID'] = email_df['Body'].apply(sha256_hash)
+        email_df['Mail-ID'] = email_df['Body'].apply(sha256_hash)
 
         print('\x1b[4mLoadEnronData\x1b[0m: Data Successfully loaded into a DataFrame')
         
@@ -283,7 +283,7 @@ class LoadPhishingData:
         email_df.dropna(subset=['Body'],inplace=True)
         
         email_df['Source'] = 'Phishing Data'
-        email_df['Mail_ID'] = email_df['Body'].apply(sha256_hash)
+        email_df['Mail-ID'] = email_df['Body'].apply(sha256_hash)
 
         email_df = email_df[email_df.Body != 'empty']
 
@@ -333,7 +333,7 @@ class LoadSocEnggData:
         email_df.dropna(subset=['Body'],inplace=True)
 
         email_df['Source'] = 'Social Engineering Data'
-        email_df['Mail_ID'] = email_df['Body'].apply(sha256_hash)
+        email_df['Mail-ID'] = email_df['Body'].apply(sha256_hash)
 
         print('\x1b[4mLoadSocialEngineeringData\x1b[0m: Data Successfully loaded into a DataFrame')
         
