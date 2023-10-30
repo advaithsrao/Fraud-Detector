@@ -1,5 +1,5 @@
-import sys
 from typing import Any
+import sys
 sys.path.append("..")
 
 import json
@@ -10,8 +10,10 @@ import re
 import swifter
 from mlflow.sklearn import load_model
 
-from utils.cleanup import Preprocessor, add_subject_to_body, convert_string_to_list
+from detector.preprocessor import Preprocessor
 from detector.data_loader import LoadEnronData, PersonOfInterest
+from utils.util_preprocessor import add_subject_to_body, convert_string_to_list
+from utils.util_data_loader import download_file_from_google_drive
 
 #read config.ini file
 import configparser
@@ -22,7 +24,6 @@ config.read(
         '../config.ini'
     )
 )
-
 
 
 class EnronLabeler:
@@ -389,16 +390,6 @@ class EnronLabeler:
         
         if model == None:
             raise ValueError('model not provided')
-        
-        # model_path = os.path.join(
-        #     os.path.dirname(os.path.abspath(__file__)),
-        #     model_path
-        # )
-
-        # if not os.path.exists(model_path):
-        #     raise ValueError(f'{model_path} not found')
-        
-        # model = load_model(model_path)
 
         if data['Sender-Type'] == 'External' and data['Contains-Reply-Forwards'] == False and data['Low-Comm'] == True:
             pred = model.predict([data['Body']])[0]
@@ -433,9 +424,19 @@ class EnronLabeler:
         )
 
         if not os.path.exists(model_path):
-            raise ValueError(f'Phishing {model_path} not found')
+            os.makedirs(model_path)
+            
+            #download files from google drive
+            ids = convert_string_to_list(config['model.annotator.phishing']['ids'])
+            file_names = ['conda.yaml', 'MLmodel', 'model.pkl', 'python_env.yaml', 'requirements.txt']
+
+            for id, file_name in zip(ids, file_names):
+                download_file_from_google_drive(id, os.path.join(model_path, file_name))
         
-        model = load_model(model_path)
+        try:
+            model = load_model(model_path)
+        except:
+            raise ValueError(f'Phishing Model not found in {model_path}')
 
         data['Phishing-Annotation'] = data.swifter.apply(lambda x: self.get_prediction_on_enron(data = x, model = model), axis = 1)
 
@@ -469,9 +470,19 @@ class EnronLabeler:
         )
 
         if not os.path.exists(model_path):
-            raise ValueError(f'Social Engineering {model_path} not found')
+            os.makedirs(model_path)
+            
+            #download files from google drive
+            ids = convert_string_to_list(config['model.annotator.social_engineering']['ids'])
+            file_names = ['conda.yaml', 'MLmodel', 'model.pkl', 'python_env.yaml', 'requirements.txt']
+
+            for id, file_name in zip(ids, file_names):
+                download_file_from_google_drive(id, os.path.join(model_path, file_name))
         
-        model = load_model(model_path)
+        try:
+            model = load_model(model_path)
+        except:
+            raise ValueError(f'Social Engineering Model not found in {model_path}')
 
         data['SocEngg-Annotation'] = data.swifter.apply(lambda x: self.get_prediction_on_enron(data = x, model = model), axis = 1)
 

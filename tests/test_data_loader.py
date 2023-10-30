@@ -4,7 +4,9 @@ sys.path.append("..")
 
 import pandas as pd
 import pytest
-from detector.data_loader import PersonOfInterest, LoadEnronData, LoadPhishingData, LoadSocEnggData, sha256_hash
+
+from detector.data_loader import PersonOfInterest, LoadEnronData, LoadPhishingData, LoadSocEnggData
+from utils.util_data_loader import sha256_hash
 
 def test_person_of_interest():
     poi = PersonOfInterest()
@@ -58,7 +60,7 @@ def test_sha256_hash(mail):
 def test_load_enron_data():
     data_loader = LoadEnronData()
     data = data_loader(
-        datapath = os.path.join(
+        localpath = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             '../resources/enron/sample'
         ),
@@ -69,7 +71,14 @@ def test_load_enron_data():
 
 def test_load_phishing_data():
     data_loader = LoadPhishingData()
-    data = data_loader()
+
+    data = data_loader(
+        localpath = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            '../resources/sample_phishing_emails.csv'
+        ),
+        try_web=False
+    )
     
     assert type(data) == pd.DataFrame
     assert data.columns.tolist() == ['Body', 'Label', 'Source', 'Mail-ID']
@@ -77,7 +86,14 @@ def test_load_phishing_data():
 
 def test_load_soc_engg_data():
     data_loader = LoadSocEnggData()
-    data = data_loader()
+
+    data = data_loader(
+        localpath = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            '../resources/sample_social_engineering_emails.csv'
+        ),
+        try_web=False
+    )
     
     assert type(data) == pd.DataFrame
     assert data.columns.tolist() == ['Body', 'Label', 'Source', 'Mail-ID']

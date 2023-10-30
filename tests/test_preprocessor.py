@@ -4,7 +4,9 @@ sys.path.append("..")
 
 import pandas as pd
 import pytest
-from utils.cleanup import Preprocessor, convert_string_to_list, add_subject_to_body
+
+from detector.preprocessor import Preprocessor
+from utils.util_preprocessor import convert_string_to_list, add_subject_to_body
 
 
 @pytest.fixture
