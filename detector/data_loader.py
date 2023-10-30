@@ -1,3 +1,6 @@
+import sys
+sys.path.append("..")
+
 import hashlib
 from typing import Any, List, Optional
 import os
@@ -7,8 +10,11 @@ import email
 from concurrent.futures import ThreadPoolExecutor
 import tarfile
 from zipfile import ZipFile
+import requests
+from tqdm import tqdm
 
-from utils.cleanup import convert_string_to_list
+from utils.util_preprocessor import convert_string_to_list
+from utils.util_data_loader import sha256_hash, download_file_from_google_drive
 
 #read config.ini file
 import configparser
@@ -19,21 +25,6 @@ config.read(
         '../config.ini'
     )
 )
-
-
-def sha256_hash(text):
-    """Hash the text using sha256. We use this for our mail_id column
-
-    Args:
-        text (str): text to hash
-
-    Returns:
-        str: hashed text
-    """
-
-    sha256 = hashlib.sha256()
-    sha256.update(text.encode('utf-8'))
-    return sha256.hexdigest()
 
 
 class PersonOfInterest:
@@ -84,7 +75,8 @@ class PersonOfInterest:
 class LoadEnronData:
     def __call__(
         self,
-        datapath: Optional[str] = None,
+        webpath: Optional[str] = None,
+        localpath: Optional[str] = None,
         try_web: Optional[bool] = True,
     ) -> pd.DataFrame:
         """Load the Enron email data
@@ -93,66 +85,51 @@ class LoadEnronData:
             To run this locally
         
         Args:
-            datapath (str, optional): Path to the Enron email data. Defaults to None.
+            webpath (str, optional): Path to the Enron email data. Defaults to None.
+            localpath (str, optional): Path to the Enron email data. Defaults to None.
             try_web (bool, optional): Try to download the data from the web if the data is not found locally. Defaults to True.
 
         Returns:
             email_df (pd.DataFrame): DataFrame containing the email data
         """
 
-        self.datapath = datapath
+        self.webpath = webpath
+        self.localpath = localpath
 
-        if self.datapath is None:
-            self.datapath = config['data']['enron']
+        if self.webpath is None:
+            self.webpath = config['data.enron']['webpath']
+        
+        if self.localpath is None:
+            self.localpath = os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    '../',
+                    config['data.enron']['localpath']
+            )
         
         print('\x1b[1m*** Loading Enron Data ***\x1b[0m')
 
-        if self.datapath.lower().startswith('http') or self.datapath.lower().startswith('www'):
-            if os.path.exists(
-                os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)),
-                    '../data/enron/maildir/'
-                )
-            ):
-                # If data exists in ../data/enron/, use the data directly
-                self.datapath = os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)),
-                    '../data/enron/maildir/'
-                )
-                        
-            elif try_web:
+        if not os.path.exists(self.localpath):
+            if try_web:
                 #Since the path doesnt exist, make the folders
-                os.makedirs(
-                    os.path.join(
-                        os.path.dirname(os.path.abspath(__file__)),
-                        '../data/enron/'
-                    )
-                )
+                os.makedirs(self.localpath)
 
                 #Download data from URL and proceed
                 print('\x1b[4mLoadEnronData\x1b[0m: Downloading data from online source')
                 
                 #To note here, self.datapath is a web URL from where we download the data
-                os.system(f"wget {self.datapath} -O /tmp/enron.tar.gz")
-
-                self.datapath = os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)),
-                    '../data/enron/maildir/'
-                )
+                os.system(f"wget {self.webpath} -O /tmp/enron.tar.gz")
                 
                 #Extract the tar.gz file
                 with tarfile.open("/tmp/enron.tar.gz", "r:gz") as tar:
-                    tar.extractall(self.datapath)
+                    tar.extractall(self.localpath)
+            else:
+                raise FileNotFoundError(f'\x1b[4mLoadEnronData\x1b[0m: Data not found at path: {self.localpath}')
         
-        else:
-            if not os.path.exists(self.datapath):
-                raise FileNotFoundError(f'\x1b[4mLoadEnronData\x1b[0m: Data not found at path: {self.datapath}')
-        
-        print(f'\x1b[4mLoadEnronData\x1b[0m: Loading data from path: {self.datapath}')
+        print(f'\x1b[4mLoadEnronData\x1b[0m: Loading data from path: {self.localpath}')
         
         #Load all file names
         # files = glob.glob(os.path.join(self.datapath,"/**/*."), recursive=True)
-        files = self.collect_files_in_directory(self.datapath)
+        files = self.collect_files_in_directory(self.localpath.split('/maildir')[0])
         print(f'\x1b[4mLoadEnronData\x1b[0m: Load Data Successful')
 
         # Get the email fields
@@ -205,8 +182,8 @@ class LoadEnronData:
 
         email_fields = {}
 
-        folder_user = file.split(self.datapath)[1].split('/')[0]
-        folder_name = file.split(self.datapath)[1].split('/')[1]
+        folder_user = file.split(self.localpath)[1].split('/')[0]
+        folder_name = file.split(self.localpath)[1].split('/')[1]
 
         email_fields['Folder-User'] = folder_user
         email_fields['Folder-Name'] = folder_name
@@ -226,7 +203,7 @@ class LoadEnronData:
     def get_email_df(
         self,
         files
-    ) -> pd.DataFrame:
+    ) -> pd.DataFrame:  
         """Get the email DataFrame
 
         Args:
@@ -248,34 +225,51 @@ class LoadEnronData:
 class LoadPhishingData:
     def __call__(
         self, 
-        datapath: Optional[str] = None,
+        webpath: Optional[str] = None,
+        localpath: Optional[str] = None,
+        try_web: Optional[bool] = True,
     ) -> pd.DataFrame:
         """Load the phishing email data
         
         Args:
-            datapath (str, optional): Path to the phishing email data. Defaults to None.
+            webpath (str, optional): Path to the phishing email data. Defaults to None.
+            localpath (str, optional): Path to the phishing email data. Defaults to None.
 
         Returns:
             email_df (pd.DataFrame): DataFrame containing the email data
         """
 
-        self.datapath = datapath
+        self.webpath = webpath
+        self.localpath = localpath
 
-        if self.datapath is None:
-            self.datapath = os.path.join(
+        if self.webpath is None:
+            self.webpath = config['data.phishing']['webpath']
+        
+        if self.localpath is None:
+            self.localpath = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
                 '../',
-                config['data']['phishing_emails']
+                config['data.phishing']['localpath']
             )
         
         print('\x1b[1m*** Loading Phishing Data ***\x1b[0m')
 
-        if not os.path.exists(self.datapath):
-            raise FileNotFoundError(f'\x1b[4mLoadPhishingData\x1b[0m: Data not found at path: {self.datapath}')
+        if not os.path.exists(self.localpath):
+            if try_web:
+                #download from gdrive
+                download_file_from_google_drive(
+                    id = self.webpath.split('/d/')[1].split('/view')[0],
+                    destination = self.localpath
+                )
+
+                print('\x1b[4mLoadPhishingData\x1b[0m: Downloaded data from online source')
+                
+            else:
+                raise FileNotFoundError(f'\x1b[4mLoadPhishingData\x1b[0m: Data not found at path: {self.localpath}')
         
-        print(f'\x1b[4mLoadPhishingData\x1b[0m: Loading data from path: {self.datapath}')
+        print(f'\x1b[4mLoadPhishingData\x1b[0m: Loading data from path: {self.localpath}')
         
-        email_df = pd.read_csv(self.datapath)
+        email_df = pd.read_csv(self.localpath)
 
         email_df = email_df[['Email Text', 'Email Type']]
         email_df.rename(columns={'Email Text': 'Body', 'Email Type': 'Label'}, inplace=True)
@@ -298,34 +292,48 @@ class LoadPhishingData:
 class LoadSocEnggData:
     def __call__(
         self, 
-        datapath: Optional[str] = None,
+        webpath: Optional[str] = None,
+        localpath: Optional[str] = None,
+        try_web: Optional[bool] = True,
     ) -> pd.DataFrame:
         """Load the social engineering email data
         
         Args:
-            datapath (str, optional): Path to the social engineering email data. Defaults to None.
+            webpath (str, optional): Path to the social engineering email data. Defaults to None.
+            localpath (str, optional): Path to the social engineering email data. Defaults to None.
 
         Returns:
             email_df (pd.DataFrame): DataFrame containing the email data
         """
 
-        self.datapath = datapath
+        self.webpath = webpath
+        self.localpath = localpath
 
-        if self.datapath is None:
-            self.datapath = os.path.join(
+        if self.webpath is None:
+            self.webpath = config['data.social_engineering']['webpath']
+        
+        if self.localpath is None:
+            self.localpath = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
                 '../',
-                config['data']['social_engineering_emails']
+                config['data.social_engineering']['localpath']
             )
         
         print('\x1b[1m*** Loading Social Engineering Data ***\x1b[0m')
 
-        if not os.path.exists(self.datapath):
-            raise FileNotFoundError(f'\x1b[4mLoadSocialEngineeringData\x1b[0m: Data not found at path: {self.datapath}')
+        if not os.path.exists(self.localpath):
+            if try_web:
+                #download from gdrive
+                download_file_from_google_drive(
+                    id = self.webpath.split('/d/')[1].split('/view')[0],
+                    destination = self.localpath
+                )
+
+                print('\x1b[4mLoadSocialEngineeringData\x1b[0m: Downloaded data from online source')
+            else:
+                raise FileNotFoundError(f'\x1b[4mLoadSocialEngineeringData\x1b[0m: Data not found at path: {self.localpath}')
         
-        print(f'\x1b[4mLoadSocialEngineeringData\x1b[0m: Loading data from path: {self.datapath}')
-        
-        email_df = pd.read_csv(self.datapath)
+        email_df = pd.read_csv(self.localpath)
 
         email_df = email_df[['Text', 'Class']]
         email_df.rename(columns={'Text': 'Body', 'Class': 'Label'}, inplace=True)
