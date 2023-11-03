@@ -5,6 +5,7 @@ import os
 import warnings
 warnings.filterwarnings("ignore")
 
+import numpy as np
 import pandas as pd
 from numpy import array
 import pytest
@@ -59,11 +60,7 @@ def test_get_classification_report_confusion_matrix(y_true, y_pred):
         }
     }
 
-    assert conf_matrix.shape() == (2,2)
-    assert conf_matrix[0][0] == 0
-    assert conf_matrix[0][1] == 0
-    assert conf_matrix[1][0] == 1
-    assert conf_matrix[1][1] == 1
+    assert (conf_matrix == np.array([[0, 0], [1, 1]])).all()
 
 def test_evaluate_and_log(x, y_true, y_pred):
     evaluate_and_log(x, y_true, y_pred, '/tmp/test.log')
