@@ -14,7 +14,6 @@ python = "^3.8"
 pandas = "^1.1.4"
 numpy = "^1.19.4"
 jupyter = "^1.0.0"
-mlflow = "*"
 swifter = "*"
 
 #detection packages
@@ -38,9 +37,14 @@ gensim = "*"
 #ethics packages
 #crypten = "*"
 
+#mlops
+wandb = "*"
+mlflow = "*"
+
 #other packages
 email = "6.0.0a1"
 html2text = "*"
+
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0"

@@ -5,7 +5,7 @@ Fraud Detection Package with fine-tuned RoBERTa model, equipped with ethical con
 - [Fraud-Detector](#fraud-detector)
   - [Team](#team)
   - [CI/CD Pipeline Status](#cicd-pipeline-status)
-  - [Steps to run](#steps-to-run)
+  - [Installation and Run Instructions](#installation-and-run-instructions)
   - [Abstract](#abstract)
   - [Dataset Description](#dataset-description)
   - [Proposed Methodology](#proposed-methodology)
@@ -31,15 +31,15 @@ Fraud Detection Package with fine-tuned RoBERTa model, equipped with ethical con
 
 ***
 
-## Steps to run
+## Installation and Run Instructions
 
 **All helper functions and run steps can be found in the wiki pages.**
 
 | Helper | Page |
 | ------ | ------ |
-| Setup Environment | [Wiki](https://github.com/advaithsrao/Fraud-Detector/wiki/Setup-Environment) |
-| Processing and Labeler | [Wiki](https://github.com/advaithsrao/Fraud-Detector/wiki/Load-Preprocessed-and-Labeled-Data) |
-| | |
+| Setup Environment and Integrations | [Wiki](https://github.com/advaithsrao/Fraud-Detector/wiki/Setup-Environment) |
+| Standalone - Processing and Labeler | [Wiki](https://github.com/advaithsrao/Fraud-Detector/wiki/Load-Preprocessed-and-Labeled-Data) |
+| Model Training Pipeline | [Wiki](https://github.com/advaithsrao/Fraud-Detector/wiki/Model-Training-Pipeline) |
 
 ***
 
