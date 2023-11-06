@@ -12,7 +12,7 @@ authors = ["Advaith Rao <advaith652@gmail.com>", "Falgun Malhotra <falgun.malhot
 #main packages
 python = "^3.8"
 pandas = "^1.1.4"
-scipy = "^1.11.0"
+scipy = "*"
 numpy = "*"
 jupyter = "^1.0.0"
 swifter = "*"
