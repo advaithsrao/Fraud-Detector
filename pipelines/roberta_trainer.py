@@ -31,6 +31,7 @@ def parse_args():
     parser.add_argument("--num_labels", "-l", type=int, default=2, help="Number of labels")
     parser.add_argument("--num_epochs", "-e", type=int, default=40, help="Number of epochs")
     parser.add_argument("--batch_size", "-b", type=int, default=128, help="Batch size")
+    parser.add_argument("--device", "-d", type=str, default='cpu', help="Device to train the model on: 'cpu', 'cuda' or 'gpu'")
     return parser.parse_args()
 
 def load_data():
@@ -106,9 +107,9 @@ def data_split(data):
         ]
         train['Split'] = 'Train'
     else:
-        train = data[data['Split'] == 'Train'].head(50)
-        gold_fraud = data[data['Split'] == 'Gold Fraud'].head(50)
-        sanity = data[data['Split'] == 'Sanity'].head(50)
+        train = data[data['Split'] == 'Train']
+        gold_fraud = data[data['Split'] == 'Gold Fraud']
+        sanity = data[data['Split'] == 'Sanity']
     return train, sanity, gold_fraud
 
 def train_model(train_data, hyper_params):
@@ -197,19 +198,22 @@ def dump_logs_to_wandb(hyper_params, f1_scores, true_pred_map):
 if __name__ == '__main__':
     # Parse the arguments
     args = parse_args()
-
+    device = args.device
+    device = device if device != 'gpu' else 'cuda'
+    
     # Define model hyperparameters
     hyper_params = {
         'num_labels': args.num_labels,
         'num_epochs': args.num_epochs,
-        'batch_size': args.batch_size
+        'batch_size': args.batch_size,
+        'device': args.device,
     }
 
     # Log in to Weights and Biases
     wandbdict = {
         'key': os.getenv('WANDB_API_KEY'),
         'entity': os.getenv('WANDB_ENTITY'),
-        'project': os.getenv('WANDB_PROJECT')
+        'project': os.getenv('WANDB_PROJECT'),
     }
     wandb.login(key=wandbdict['key'])
     run = wandb.init(project=wandbdict['project'], entity=wandbdict['entity'])
@@ -243,3 +247,4 @@ if __name__ == '__main__':
 
     # Close the Weights and Biases run
     run.finish()
+

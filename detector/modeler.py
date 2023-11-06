@@ -1,4 +1,6 @@
 import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
+
 import shutil
 import pandas as pd
 import numpy as np
@@ -16,7 +18,8 @@ class RobertaModel:
         learning_rate=2e-5, 
         epsilon=1e-8, 
         num_epochs=40, 
-        batch_size=128
+        batch_size=128,
+        device=None
     ):
         self.num_labels = num_labels
         self.path = path
@@ -25,8 +28,14 @@ class RobertaModel:
         self.epsilon = epsilon
         self.num_epochs = num_epochs
         self.batch_size = batch_size
+        self.device = device
         
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        if not self.device and torch.cuda.is_available():
+            self.device = 'cuda'
+        elif not self.device:
+            self.device = 'cpu'
+
+        self.device = torch.device(self.device)
         self.tokenizer = RobertaTokenizer.from_pretrained(self.model_name)
 
         if self.path != '':
@@ -276,3 +285,4 @@ class RobertaModel:
         pred_flat = np.argmax(preds, axis=1).flatten()
         labels_flat = labels.flatten()
         return np.sum(pred_flat == labels_flat) / len(labels_flat)
+
