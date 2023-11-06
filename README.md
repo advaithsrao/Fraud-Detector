@@ -38,8 +38,9 @@ Fraud Detection Package with fine-tuned RoBERTa model, equipped with ethical con
 | Helper | Page |
 | ------ | ------ |
 | Setup Environment and Integrations | [Wiki](https://github.com/advaithsrao/Fraud-Detector/wiki/Setup-Environment) |
-| Standalone - Processing and Labeler | [Wiki](https://github.com/advaithsrao/Fraud-Detector/wiki/Load-Preprocessed-and-Labeled-Data) |
-| Model Training Pipeline | [Wiki](https://github.com/advaithsrao/Fraud-Detector/wiki/Model-Training-Pipeline) |
+| W&B Model tracking and Logging for our experiments | [Wiki](https://github.com/advaithsrao/Fraud-Detector/wiki/Model-Tracking-and-Logs) |
+| *How to:* Standalone - Processing and Labeler | [Wiki](https://github.com/advaithsrao/Fraud-Detector/wiki/Load-Preprocessed-and-Labeled-Data) |
+| *How to:* Model Training Pipeline | [Wiki](https://github.com/advaithsrao/Fraud-Detector/wiki/Model-Training-Pipeline) |
 
 ***
 
