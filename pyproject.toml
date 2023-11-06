@@ -12,14 +12,15 @@ authors = ["Advaith Rao <advaith652@gmail.com>", "Falgun Malhotra <falgun.malhot
 #main packages
 python = "^3.8"
 pandas = "^1.1.4"
-numpy = "^1.19.4"
+scipy = "^1.11.0"
+numpy = "*"
 jupyter = "^1.0.0"
 swifter = "*"
 
 #detection packages
 scikit-learn = "^1.3.0"
 transformers = "*"
-torch = "1.12.1"
+torch = "2.1.0"
 
 #nlp packages
 regex = "*"
@@ -50,4 +51,5 @@ html2text = "*"
 pytest = "^6.0"
 pytest-xdist = "*"
 torchvision = "*"
+torchtext = "*"
 
