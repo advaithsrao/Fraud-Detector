@@ -1,4 +1,4 @@
-#usage: python3 -m pipelines.roberta_trainer --num_epochs 20 --batch_size 8 --num_labels 2 --device 'cuda'
+#usage: python3 -m pipelines.svm_trainer --num_labels 2 --C 10 --kernel 'rbf'
 import sys
 sys.path.append('..')
 
@@ -12,7 +12,7 @@ import os
 
 from detector.data_loader import LoadEnronData, LoadPhishingData, LoadSocEnggData
 from detector.labeler import EnronLabeler
-from detector.modeler import RobertaModel
+from detector.modeler import SVMModel
 from detector.preprocessor import Preprocessor
 from utils.util_modeler import evaluate_and_log, get_f1_score
 
@@ -28,11 +28,10 @@ config.read(
 )
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Roberta Model Fraud Detector Pipeline")
+    parser = argparse.ArgumentParser(description="SVM Model Fraud Detector Pipeline")
     parser.add_argument("--num_labels", "-l", type=int, default=2, help="Number of labels")
-    parser.add_argument("--num_epochs", "-e", type=int, default=40, help="Number of epochs")
-    parser.add_argument("--batch_size", "-b", type=int, default=128, help="Batch size")
-    parser.add_argument("--device", "-d", type=str, default='cpu', help="Device to train the model on: 'cpu', 'cuda' or 'gpu'")
+    parser.add_argument("--C", "-C", type=int, default=1, help="Regularization parameter")
+    parser.add_argument("--kernel", "-k", type=str, default='rbf', help="Kernel to use in the algorithm ('linear', 'poly', 'rbf', 'sigmoid', 'precomputed')")
     return parser.parse_args()
 
 def load_data():
@@ -99,7 +98,7 @@ def data_split(data):
         # For sanity_set, take first 5000 emails with Sender-Type = 'Internal'
         sanity = data[
             (data['Sender-Type'] == 'Internal') & (data['Source'] == 'Enron Data')
-        ].head(200000)
+        ].head(5000)
         sanity['Split'] = 'Sanity'
 
         # For train_set, take all data not in gold_fraud_set and sanity_set
@@ -115,27 +114,10 @@ def data_split(data):
 
 def train_model(train_data, hyper_params):
     run = wandb.init(config=hyper_params)
-    model = RobertaModel(**hyper_params)
-
-    # os.makedirs(f'/tmp/{date}/logs', exist_ok=True)
-
-    # # Define a log file path
-    # log_filename = f"/tmp/{date}/logs/model_training.log"
-
-    # # Create or open the log file in write mode
-    # log_file = open(log_filename, "w")
-
-    # # Redirect stdout to the log file
-    # sys.stdout = log_file
+    model = SVMModel(**hyper_params)
 
     # Call your code that produces output
-    model.train(body=train_data['Body'], label=train_data['Label'], validation_size=0.2, wandb=run)
-
-    # Restore the original stdout
-    # sys.stdout = sys.__stdout__
-
-    # Close the log file
-    # log_file.close()
+    model.train(body=train_data['Body'], label=train_data['Label'])
     return model
 
 def test_model(train_data, sanity_data, gold_fraud_data):
@@ -157,17 +139,17 @@ def test_model(train_data, sanity_data, gold_fraud_data):
     true_pred_map['train']['true'] = train_data['Label'].tolist()
     true_pred_map['train']['pred'] = model.predict(body=train_data['Body'])
 
-    evaluate_and_log(x=train_data['Body'].tolist(), y_true=true_pred_map['train']['true'], y_pred=true_pred_map['train']['pred'], filename=f'/tmp/{date}/logs/train.log', experiment=run)
+    evaluate_and_log(x=train_data['Body'].tolist(), y_true=true_pred_map['train']['true'], y_pred=true_pred_map['train']['pred'], filename=f'/tmp/{date}/logs/train.log')
     f1_scores['train'] = get_f1_score(y_true=true_pred_map['train']['true'], y_pred=true_pred_map['train']['pred'])
 
     true_pred_map['sanity']['true'] = sanity_data['Label'].tolist()
     true_pred_map['sanity']['pred'] = model.predict(body=sanity_data['Body'])
-    evaluate_and_log(x=sanity_data['Body'].tolist(), y_true=true_pred_map['sanity']['true'], y_pred=true_pred_map['sanity']['pred'], filename=f'/tmp/{date}/logs/sanity.log', experiment=run)
+    evaluate_and_log(x=sanity_data['Body'].tolist(), y_true=true_pred_map['sanity']['true'], y_pred=true_pred_map['sanity']['pred'], filename=f'/tmp/{date}/logs/sanity.log')
     f1_scores['sanity'] = get_f1_score(y_true=true_pred_map['sanity']['true'], y_pred=true_pred_map['sanity']['pred'])
 
     true_pred_map['gold_fraud']['true'] = gold_fraud_data['Label'].tolist()
     true_pred_map['gold_fraud']['pred'] = model.predict(body=gold_fraud_data['Body'])
-    evaluate_and_log(x=gold_fraud_data['Body'].tolist(), y_true=true_pred_map['gold_fraud']['true'], y_pred=true_pred_map['gold_fraud']['pred'], filename=f'/tmp/{date}/logs/gold_fraud.log', experiment=run)
+    evaluate_and_log(x=gold_fraud_data['Body'].tolist(), y_true=true_pred_map['gold_fraud']['true'], y_pred=true_pred_map['gold_fraud']['pred'], filename=f'/tmp/{date}/logs/gold_fraud.log')
     f1_scores['gold_fraud'] = get_f1_score(y_true=true_pred_map['gold_fraud']['true'], y_pred=true_pred_map['gold_fraud']['pred'])
 
     return f1_scores, true_pred_map
@@ -199,15 +181,12 @@ def dump_logs_to_wandb(hyper_params, f1_scores, true_pred_map):
 if __name__ == '__main__':
     # Parse the arguments
     args = parse_args()
-    device = args.device
-    device = device if device != 'gpu' else 'cuda'
     
     # Define model hyperparameters
     hyper_params = {
         'num_labels': args.num_labels,
-        'num_epochs': args.num_epochs,
-        'batch_size': args.batch_size,
-        'device': args.device,
+        'C': args.C,
+        'kernel': args.kernel
     }
 
     # Log in to Weights and Biases

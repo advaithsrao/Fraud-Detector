@@ -10,7 +10,7 @@ import pandas as pd
 from numpy import array
 import pytest
 
-from utils.util_modeler import evaluate_and_log, get_f1_score, get_classification_report_confusion_matrix
+from utils.util_modeler import evaluate_and_log, get_f1_score, get_classification_report_confusion_matrix, Word2VecEmbedder
 
 
 @pytest.fixture
@@ -24,6 +24,18 @@ def y_true():
 @pytest.fixture
 def y_pred():
     return [0, 1]
+
+@pytest.fixture
+def mail():
+    return """
+    I would like to get some of the timing issues resolved prior to
+    implementing "No Tag, No Flow."  The problems seem to be isolated, but it
+    only takes a single entity to create huge problems for everyone involved.
+    
+    Joe Smith | Strategy & Business Development
+    111 Market St. Suite 111| San Francisco, CA 94103
+    M: 111.111.1111| joe@foobar.com
+    """
 
 def test_get_f1_score(y_true, y_pred):
     f1_score = get_f1_score(y_true, y_pred)
@@ -65,6 +77,11 @@ def test_get_classification_report_confusion_matrix(y_true, y_pred):
 def test_evaluate_and_log(x, y_true, y_pred):
     evaluate_and_log(x, y_true, y_pred, '/tmp/test.log')
     assert os.path.exists('/tmp/test.log')
+
+def test_word2vec_embedding(mail):
+    embedder = Word2VecEmbedder()
+    embedding = embedder.fit_transform(mail)
+    assert len(embedding) == 300
 
 if __name__ == "__main__":
     pytest.main()

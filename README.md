@@ -56,6 +56,22 @@ We make use of a rich source of public email communication, the Enron email data
 
 In the early 2000s, Leslie Kaelbling at MIT purchased the dataset and noted that, though the dataset contained scam emails, it also had a number of integrity problems. The dataset was updated later, but it becomes key to ensure privacy in the data while we use it to train a deep neural network model.
 
+**Data Splits:**
+
+| Set | Emails |
+| --- | --- |
+| Train | 304235 |
+| Sanity | 200000 |
+| Gold Fraud | 1000 | 
+
+**Training Label Split:**
+
+| Label | Emails |
+| --- | --- |
+| 0 | 288428 |
+| 1 | 15807 |
+
+
 ***
 
 ## Proposed Methodology
