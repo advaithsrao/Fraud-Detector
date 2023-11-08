@@ -343,7 +343,7 @@ class SVMModel:
         X = None
         # Concatenate sparse matrices into a single feature matrix
         for doc in body:
-            doc_vector = self.vectorizer.transform(doc)
+            doc_vector = self.vectorizer.fit_transform(doc)
             if X is None:
                 X = doc_vector
             else:
@@ -373,7 +373,7 @@ class SVMModel:
         X = None
         # Concatenate sparse matrices into a single feature matrix
         for doc in body:
-            doc_vector = self.vectorizer.transform(doc)
+            doc_vector = self.vectorizer.fit_transform(doc)
             if X is None:
                 X = doc_vector
             else:
