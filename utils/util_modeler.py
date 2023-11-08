@@ -4,7 +4,7 @@ import numpy as np
 import gensim.downloader
 from nltk.tokenize import RegexpTokenizer
 import wandb
-from torch.utils.data import Sampler
+# from torch.utils.data import Sampler
 from sklearn.utils.class_weight import compute_sample_weight
 
 def get_f1_score(
@@ -122,19 +122,59 @@ class Word2VecEmbedder:
         return document_embedding
 
 
-class TPSampler(Sampler):
-    def __init__(self, data_source, class_labels):
-        self.data_source = data_source
-        self.class_labels = class_labels
+class TPSampler:
+    def __init__(
+        self, 
+        class_labels, 
+        tp_ratio=0.1, 
+        batch_size=32
+    ):
+        """A custom sampler to sample the training data.
+        
+        Args:
+            class_labels (list[int]): The class labels of the training data.
+            tp_ratio (float, optional): The ratio of true positives to sample. Defaults to 0.1.
+            batch_size (int, optional): The batch size. Defaults to 32.
 
-    def __iter__(self):
-        sample_weight = compute_sample_weight(class_labels=self.class_labels, class_weight='balanced')
-        num_samples = len(self.data_source)
+        Returns:
+            iter: The indices of the sampled data.
+        """
+
+        self.tp_indices = [i for i, label in enumerate(class_labels) if label == 1]
+        self.non_tp_indices = [i for i, label in enumerate(class_labels) if label == 0]
+        self.tp_ratio = tp_ratio
+        self.batch_size = batch_size
+
+    def __iter__(
+        self
+    ):
+        """Iterate through the sampled indices.
+
+        Returns:
+            iter: The indices of the sampled data.
+        """
+        
+        num_samples = len(self.tp_indices)
+        tp_batch_size = int(self.tp_ratio * self.batch_size)
+        non_tp_batch_size = self.batch_size - tp_batch_size
         sampled_indices = []
 
-        # Sample indices based on the sample_weight
         while len(sampled_indices) < num_samples:
-            indices = np.random.choice(num_samples, num_samples, p=sample_weight / sample_weight.sum())
-            sampled_indices.extend(indices)
+            tp_indices = np.random.choice(self.tp_indices, tp_batch_size, replace=True)
+            non_tp_indices = np.random.choice(self.non_tp_indices, non_tp_batch_size, replace=True)
+            batch_indices = np.concatenate((tp_indices, non_tp_indices))
+            np.random.shuffle(batch_indices)
+            sampled_indices.extend(batch_indices)
 
         return iter(sampled_indices)
+
+    def __len__(
+        self
+    ):
+        """Returns the total number of samples for the dataloader.
+
+        Returns:
+            int: The total number of samples for the dataloader.
+        """
+        
+        return len(self.tp_indices)  # This defines the total number of samples for the dataloader

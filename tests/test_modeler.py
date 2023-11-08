@@ -10,7 +10,7 @@ import pandas as pd
 from numpy import array
 import pytest
 
-from utils.util_modeler import evaluate_and_log, get_f1_score, get_classification_report_confusion_matrix, Word2VecEmbedder
+from utils.util_modeler import evaluate_and_log, get_f1_score, get_classification_report_confusion_matrix, Word2VecEmbedder, TPSampler
 
 
 @pytest.fixture
@@ -82,6 +82,10 @@ def test_word2vec_embedding(mail):
     embedder = Word2VecEmbedder()
     embedding = embedder.fit_transform(mail)
     assert len(embedding) == 300
+
+def test_tp_sampler():
+    sampler = TPSampler(class_labels=[0,1,0,1,0,1])
+    assert sampler.__len__() == 3
 
 if __name__ == "__main__":
     pytest.main()

@@ -108,7 +108,8 @@ class RobertaModel:
         train_size = dataset_size - val_size
         train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
 
-        tp_sampler = TPSampler(train_dataset, label)
+        # Create a sampler to sample the training data with a 1:10 ratio of true positives to non-true positives to avoid class imbalance in batches
+        tp_sampler = TPSampler(class_labels=label, tp_ratio=0.1, batch_size=self.batch_size)
 
         # Create data loaders for training and validation data with the custom sampler
         train_dataloader = DataLoader(train_dataset, batch_size=self.batch_size, sampler=tp_sampler)
