@@ -340,16 +340,8 @@ class SVMModel:
             label = label.tolist()
 
         # Vectorize the input texts
-        X = None
-        # Concatenate sparse matrices into a single feature matrix
-        for doc in body:
-            doc_vector = self.vectorizer.fit_transform(doc)
-            if X is None:
-                X = doc_vector
-            else:
-                X = hstack((X, doc_vector))
-        
-        y = label
+        X = np.array([self.vectorizer.fit_transform(text) for text in body])
+        y = np.array(label)
 
         # Train the SVM model
         self.model.fit(X, y)
@@ -370,17 +362,13 @@ class SVMModel:
             body = body.tolist()
 
         # Vectorize the input texts
-        X = None
-        # Concatenate sparse matrices into a single feature matrix
-        for doc in body:
-            doc_vector = self.vectorizer.fit_transform(doc)
-            if X is None:
-                X = doc_vector
-            else:
-                X = hstack((X, doc_vector))
+        X = np.array([self.vectorizer.fit_transform(text) for text in body])
 
         # Make predictions using the trained SVM model
         predictions = self.model.predict(X)
+
+        if isinstance(predictions, np.ndarray):
+            predictions = predictions.tolist()
 
         return predictions
 
