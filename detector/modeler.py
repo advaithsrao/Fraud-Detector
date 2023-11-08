@@ -14,6 +14,7 @@ from transformers import RobertaTokenizer, RobertaForSequenceClassification, Ada
 from torch.utils.data import DataLoader, TensorDataset
 import wandb
 from mlflow.sklearn import save_model
+from scipy.sparse import hstack
 
 from utils.util_modeler import Word2VecEmbedder, TPSampler
 
@@ -339,7 +340,15 @@ class SVMModel:
             label = label.tolist()
 
         # Vectorize the input texts
-        X = [self.vectorizer.fit_transform(doc) for doc in body]
+        X = None
+        # Concatenate sparse matrices into a single feature matrix
+        for doc in body:
+            doc_vector = self.vectorizer.transform(doc)
+            if X is None:
+                X = doc_vector
+            else:
+                X = hstack((X, doc_vector))
+        
         y = label
 
         # Train the SVM model
@@ -361,7 +370,14 @@ class SVMModel:
             body = body.tolist()
 
         # Vectorize the input texts
-        X = [self.vectorizer.fit_transform(doc) for doc in body]
+        X = None
+        # Concatenate sparse matrices into a single feature matrix
+        for doc in body:
+            doc_vector = self.vectorizer.transform(doc)
+            if X is None:
+                X = doc_vector
+            else:
+                X = hstack((X, doc_vector))
 
         # Make predictions using the trained SVM model
         predictions = self.model.predict(X)
