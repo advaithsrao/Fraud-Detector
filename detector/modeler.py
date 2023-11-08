@@ -339,8 +339,8 @@ class SVMModel:
             label = label.tolist()
 
         # Vectorize the input texts
-        X = self.vectorizer.fit_transform(body)
-        y = np.array(label)
+        X = [self.vectorizer.fit_transform(doc) for doc in body]
+        y = label
 
         # Train the SVM model
         self.model.fit(X, y)
@@ -361,7 +361,7 @@ class SVMModel:
             body = body.tolist()
 
         # Vectorize the input texts
-        X = self.vectorizer.transform(body)
+        X = [self.vectorizer.fit_transform(doc) for doc in body]
 
         # Make predictions using the trained SVM model
         predictions = self.model.predict(X)
