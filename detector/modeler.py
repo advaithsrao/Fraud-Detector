@@ -4,10 +4,18 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 import shutil
 import pandas as pd
 import numpy as np
+from sklearn.svm import SVC
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.utils.class_weight import compute_class_weight
 import torch
 from transformers import RobertaTokenizer, RobertaForSequenceClassification, AdamW, get_linear_schedule_with_warmup
 from torch.utils.data import DataLoader, TensorDataset
 import wandb
+from mlflow.sklearn import save_model
+
+from utils.util_modeler import Word2VecEmbedder, TPSampler
 
 class RobertaModel:
     def __init__(
@@ -100,8 +108,11 @@ class RobertaModel:
         train_size = dataset_size - val_size
         train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
 
-        # Create data loaders for training and validation data
-        train_dataloader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
+        # Create a sampler to sample the training data with a 1:10 ratio of true positives to non-true positives to avoid class imbalance in batches
+        tp_sampler = TPSampler(class_labels=label, tp_ratio=0.1, batch_size=self.batch_size)
+
+        # Create data loaders for training and validation data with the custom sampler
+        train_dataloader = DataLoader(train_dataset, batch_size=self.batch_size, sampler=tp_sampler)
         validation_dataloader = DataLoader(val_dataset, batch_size=self.batch_size)
 
         # Initialize the optimizer and learning rate scheduler
@@ -114,7 +125,12 @@ class RobertaModel:
         patience = 3  # Number of epochs to wait for improvement
         wait = 0
 
-        # Training loop
+        class_weights = compute_class_weight('balanced', classes=np.unique(label), y=label)
+        class_weights = torch.tensor(class_weights, dtype=torch.float32).to(self.device)
+
+        # Define the loss function with class weights
+        loss_function = torch.nn.CrossEntropyLoss(weight=class_weights)
+
         for epoch in range(self.num_epochs):
             print(f'{"="*20} Epoch {epoch + 1}/{self.num_epochs} {"="*20}')
 
@@ -129,7 +145,10 @@ class RobertaModel:
 
                 self.model.zero_grad()
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-                loss = outputs[0]
+                logits = outputs[1]
+
+                # Calculate the loss using the weighted loss function
+                loss = loss_function(logits, b_labels)
                 total_train_loss += loss.item()
 
                 loss.backward()
@@ -150,7 +169,6 @@ class RobertaModel:
             self.model.eval()
             total_eval_accuracy = 0
             total_eval_loss = 0
-            nb_eval_steps = 0
 
             for batch in validation_dataloader:
                 b_input_ids = batch[0].to(self.device)
@@ -163,8 +181,8 @@ class RobertaModel:
                     logits = outputs[1]
 
                 total_eval_loss += loss.item()
-                logits = logits.detach().cpu().numpy()
-                label_ids = b_labels.to('cpu').numpy()
+                logits = logits.detach().to(self.device).numpy()
+                label_ids = b_labels.to(self.device).numpy()
                 total_eval_accuracy += self.accuracy(logits, label_ids)
 
             avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
@@ -286,3 +304,81 @@ class RobertaModel:
         labels_flat = labels.flatten()
         return np.sum(pred_flat == labels_flat) / len(labels_flat)
 
+
+class SVMModel:
+    def __init__(
+        self,
+        num_labels: int = 2,
+        kernel='linear',
+        C=1.0,
+    ):
+        self.num_labels = num_labels
+        self.kernel = kernel
+        self.C = C
+        self.model = SVC(kernel=self.kernel, C=self.C, probability=True, random_state=42, verbose=True, class_weight='balanced')
+        # self.vectorizer = TfidfVectorizer(max_features=512)
+        self.vectorizer = Word2VecEmbedder()
+
+    def train(
+        self,
+        body: pd.Series | list[str],
+        label: pd.Series | list[int],
+    ):
+        """Trains the SVM model.
+
+        Args:
+            body (pd.Series | list[str]): The body of the email.
+            label (pd.Series | list[int]): The label of the email.
+
+        Raises:
+            ValueError: If the body and label are not of the same size.
+        """
+        if isinstance(body, pd.Series):
+            body = body.tolist()
+        if isinstance(label, pd.Series):
+            label = label.tolist()
+
+        # Vectorize the input texts
+        X = self.vectorizer.fit_transform(body)
+        y = np.array(label)
+
+        # Train the SVM model
+        self.model.fit(X, y)
+
+    def predict(
+        self,
+        body: pd.Series | list[str],
+    ):
+        """Predicts the labels of the given data.
+
+        Args:
+            body (pd.Series | list[str]): The body of the email.
+
+        Returns:
+            np.array: The predictions of the model.
+        """
+        if isinstance(body, pd.Series):
+            body = body.tolist()
+
+        # Vectorize the input texts
+        X = self.vectorizer.transform(body)
+
+        # Make predictions using the trained SVM model
+        predictions = self.model.predict(X)
+
+        return predictions
+
+    def save_model(
+        self,
+        path: str,
+    ):
+        """Saves the model to the given path.
+
+        Args:
+            path (str): The path to save the model to.
+        """
+
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        
+        save_model(self.model, path)
