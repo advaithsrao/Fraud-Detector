@@ -114,15 +114,12 @@ class Word2VecEmbedder:
             np.ndarray: Word2Vec embeddings for the input text.
         """
 
-        embedding = []
-
         # Initialize an array to store Word2Vec embeddings for the input text
         words = self.tokenizer.tokenize(text)  # Tokenize the document
         word_vectors = [self.model[word] if word in self.model else np.zeros(self.model.vector_size) for word in words]
         document_embedding = np.mean(word_vectors, axis=0)  # Calculate the mean of word embeddings for the document
-        embedding.append(document_embedding)
 
-        return np.array(embedding)
+        return document_embedding.tolist()
 
 
 class TPSampler:
