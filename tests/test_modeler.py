@@ -80,7 +80,7 @@ def test_evaluate_and_log(x, y_true, y_pred):
 
 def test_word2vec_embedding(mail):
     embedder = Word2VecEmbedder()
-    embedding = embedder.fit_transform(mail)
+    embedding = embedder.transform(mail)[0]
     assert len(embedding) == 300
 
 def test_tp_sampler():

@@ -6,6 +6,7 @@ from nltk.tokenize import RegexpTokenizer
 import wandb
 # from torch.utils.data import Sampler
 from sklearn.utils.class_weight import compute_sample_weight
+from sklearn.base import BaseEstimator, TransformerMixin
 
 def get_f1_score(
     y_true: list[int],
@@ -91,35 +92,47 @@ def evaluate_and_log(
         log_file.write(log_content)
 
 
-class Word2VecEmbedder:
+class Word2VecEmbedder(BaseEstimator, TransformerMixin):
     def __init__(
         self,
         model_name: str = 'word2vec-google-news-300',
-        tokenizer: RegexpTokenizer(r'\w+') = RegexpTokenizer(r'\w+')
+        tokenizer=RegexpTokenizer(r'\w+')
     ):
         self.model = gensim.downloader.load(model_name)
         self.tokenizer = tokenizer
 
-    def fit_transform(
+    def fit(
         self, 
-        text: str,
-        
+        X, 
+        y=None
+    ):
+        return self
+
+    def transform(
+        self, 
+        X
     ):
         """Calculate Word2Vec embeddings for the given text.
 
         Args:
-            text (str): text document.
+            X (list): List of text documents.
 
         Returns:
             np.ndarray: Word2Vec embeddings for the input text.
         """
 
-        # Initialize an array to store Word2Vec embeddings for the input text
-        words = self.tokenizer.tokenize(text)  # Tokenize the document
-        word_vectors = [self.model[word] if word in self.model else np.zeros(self.model.vector_size) for word in words]
-        document_embedding = np.mean(word_vectors, axis=0)  # Calculate the mean of word embeddings for the document
+        if isinstance(X, str):
+            X = [X]
 
-        return document_embedding.tolist()
+        embeddings = []
+
+        for text in X:
+            words = self.tokenizer.tokenize(text)  # Tokenize the document
+            word_vectors = [self.model[word] if word in self.model else np.zeros(self.model.vector_size) for word in words]
+            document_embedding = np.mean(word_vectors, axis=0)  # Calculate the mean of word embeddings for the document
+            embeddings.append(document_embedding)
+
+        return np.array(embeddings)
 
 
 class TPSampler:
