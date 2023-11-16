@@ -1,4 +1,4 @@
-#usage: python3 -m pipelines.roberta_trainer --num_epochs 20 --batch_size 8 --num_labels 2 --device 'cuda'
+#usage: python3 -m pipelines.roberta_trainer --num_epochs 20 --batch_size 8 --num_labels 2 --device 'cuda' --save_path '/tmp'
 import sys
 sys.path.append('..')
 
@@ -29,6 +29,7 @@ config.read(
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Roberta Model Fraud Detector Pipeline")
+    parser.add_argument("--save_path", "-s", type=str, default='/tmp/', help="Output save path")
     parser.add_argument("--num_labels", "-l", type=int, default=2, help="Number of labels")
     parser.add_argument("--num_epochs", "-e", type=int, default=40, help="Number of epochs")
     parser.add_argument("--batch_size", "-b", type=int, default=128, help="Batch size")
@@ -138,7 +139,7 @@ def train_model(train_data, hyper_params):
     # log_file.close()
     return model
 
-def test_model(train_data, sanity_data, gold_fraud_data):
+def test_model(train_data, sanity_data, gold_fraud_data, save_path):
     # Define a dictionary to store the f1 scores
     f1_scores = {}
     
@@ -149,42 +150,42 @@ def test_model(train_data, sanity_data, gold_fraud_data):
         'gold_fraud':{}
     }
 
-    os.makedirs(f'/tmp/{date}/logs', exist_ok=True)
+    os.makedirs(os.path.join(save_path,'logs'), exist_ok=True)
 
     # Save the model and logs to the date folder
-    model.save_model(f'/tmp/{date}/model')
+    model.save_model(os.path.join(save_path,'model'))
 
     true_pred_map['train']['true'] = train_data['Label'].tolist()
     true_pred_map['train']['pred'] = model.predict(body=train_data['Body'])
 
-    evaluate_and_log(x=train_data['Body'].tolist(), y_true=true_pred_map['train']['true'], y_pred=true_pred_map['train']['pred'], filename=f'/tmp/{date}/logs/train.log', experiment=run)
+    evaluate_and_log(x=train_data['Body'].tolist(), y_true=true_pred_map['train']['true'], y_pred=true_pred_map['train']['pred'], filename=os.path.join(save_path,'logs/train.log'), experiment=run)
     f1_scores['train'] = get_f1_score(y_true=true_pred_map['train']['true'], y_pred=true_pred_map['train']['pred'])
 
     true_pred_map['sanity']['true'] = sanity_data['Label'].tolist()
     true_pred_map['sanity']['pred'] = model.predict(body=sanity_data['Body'])
-    evaluate_and_log(x=sanity_data['Body'].tolist(), y_true=true_pred_map['sanity']['true'], y_pred=true_pred_map['sanity']['pred'], filename=f'/tmp/{date}/logs/sanity.log', experiment=run)
+    evaluate_and_log(x=sanity_data['Body'].tolist(), y_true=true_pred_map['sanity']['true'], y_pred=true_pred_map['sanity']['pred'], filename=os.path.join(save_path,'logs/sanity.log'), experiment=run)
     f1_scores['sanity'] = get_f1_score(y_true=true_pred_map['sanity']['true'], y_pred=true_pred_map['sanity']['pred'])
 
     true_pred_map['gold_fraud']['true'] = gold_fraud_data['Label'].tolist()
     true_pred_map['gold_fraud']['pred'] = model.predict(body=gold_fraud_data['Body'])
-    evaluate_and_log(x=gold_fraud_data['Body'].tolist(), y_true=true_pred_map['gold_fraud']['true'], y_pred=true_pred_map['gold_fraud']['pred'], filename=f'/tmp/{date}/logs/gold_fraud.log', experiment=run)
+    evaluate_and_log(x=gold_fraud_data['Body'].tolist(), y_true=true_pred_map['gold_fraud']['true'], y_pred=true_pred_map['gold_fraud']['pred'], filename=os.path.join(save_path,'logs/gold_fraud.log'), experiment=run)
     f1_scores['gold_fraud'] = get_f1_score(y_true=true_pred_map['gold_fraud']['true'], y_pred=true_pred_map['gold_fraud']['pred'])
 
     return f1_scores, true_pred_map
 
-def dump_logs_to_wandb(hyper_params, f1_scores, true_pred_map):
+def dump_logs_to_wandb(hyper_params, f1_scores, true_pred_map, save_path):
     # Log the hyperparameters and f1 scores to Weights and Biases
     all_params = {**hyper_params, **f1_scores}
     run.config.update(all_params)
 
     # Log the model to Weights and Biases
-    model_path = f'/tmp/{date}/model'
+    model_path = os.path.join(save_path,'model')
     model_artifact = wandb.Artifact("fraud-detector-model", type="model")
     model_artifact.add_dir(model_path)
     run.use_artifact(model_artifact)
 
     # Log the log files to Weights and Biases
-    logs_path = f'/tmp/{date}/logs'
+    logs_path = os.path.join(save_path,'logs')
     log_artifact = wandb.Artifact("fraud-detector-logs", type="logs")
     log_artifact.add_dir(logs_path)
     run.use_artifact(log_artifact)
@@ -225,8 +226,10 @@ if __name__ == '__main__':
     # Get the current date
     date = datetime.now().strftime("%Y-%m-%d")
 
-    # Create date folder in /tmp
-    os.makedirs(f'/tmp/{date}', exist_ok=True)
+    # Create date folder in save path
+    save_path = args.save_path
+    save_path = os.path.join(save_path, f'{date}')
+    os.makedirs(save_path, exist_ok=True)
 
     # Load the data
     data = load_data()
@@ -241,10 +244,10 @@ if __name__ == '__main__':
     model = train_model(train_data, hyper_params)
 
     # Test the model
-    f1_scores, true_pred_map = test_model(train_data, sanity_data, gold_fraud_data)
+    f1_scores, true_pred_map = test_model(train_data, sanity_data, gold_fraud_data, save_path)
 
     # Dump the logs to Weights and Biases
-    dump_logs_to_wandb(hyper_params, f1_scores, true_pred_map)
+    dump_logs_to_wandb(hyper_params, f1_scores, true_pred_map, save_path)
 
     # Close the Weights and Biases run
     run.finish()
