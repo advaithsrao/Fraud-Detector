@@ -2,6 +2,7 @@ import os
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
 import numpy as np
 import gensim.downloader
+import nltk
 from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
 import string
@@ -9,6 +10,8 @@ import wandb
 # from torch.utils.data import Sampler
 from sklearn.utils.class_weight import compute_sample_weight
 from sklearn.base import BaseEstimator, TransformerMixin
+
+nltk.download('stopwords')
 
 def get_f1_score(
     y_true: list[int],
