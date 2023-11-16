@@ -3,6 +3,8 @@ from sklearn.metrics import classification_report, confusion_matrix, f1_score
 import numpy as np
 import gensim.downloader
 from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import stopwords
+import string
 import wandb
 # from torch.utils.data import Sampler
 from sklearn.utils.class_weight import compute_sample_weight
@@ -91,6 +93,37 @@ def evaluate_and_log(
     with open(filename, 'w') as log_file:
         log_file.write(log_content)
 
+def calculate_document_embedding(doc, model, tokenizer, embed_size):
+    """Calculates the document embedding for the given document.
+    
+    Utility function for below class - Word2VecEmbedder
+
+    Args:
+        doc (str): The document.
+        model (gensim.models.keyedvectors.Word2VecKeyedVectors): The Word2Vec model.
+        tokenizer (nltk.tokenize.regexp.RegexpTokenizer): The tokenizer.
+        embed_size (int): The embedding size.
+
+    Returns:
+        np.ndarray: The document embedding.
+    """
+    
+    doc_embed = np.zeros(embed_size)
+    words = tokenizer.tokenize(doc)
+    stopset = stopwords.words('english') + list(string.punctuation)
+
+    #we lowercase the words specifically for OOV embeddings to be same for same words different case
+    words = [word.lower() for word in words]
+    words = [word for word in words if word not in stopset]
+
+    word_count = 0
+    for word in words:
+        if word in model:
+            doc_embed += model[word]
+            word_count += 1
+        
+    return doc_embed / word_count if word_count != 0 else doc_embed
+
 
 class Word2VecEmbedder(BaseEstimator, TransformerMixin):
     def __init__(
@@ -100,6 +133,7 @@ class Word2VecEmbedder(BaseEstimator, TransformerMixin):
     ):
         self.model = gensim.downloader.load(model_name)
         self.tokenizer = tokenizer
+        self.embed_size = 300
 
     def fit(
         self, 
@@ -124,15 +158,7 @@ class Word2VecEmbedder(BaseEstimator, TransformerMixin):
         if isinstance(X, str):
             X = [X]
 
-        embeddings = []
-
-        for text in X:
-            words = self.tokenizer.tokenize(text)  # Tokenize the document
-            word_vectors = [self.model[word] if word in self.model else np.zeros(self.model.vector_size) for word in words]
-            document_embedding = np.mean(word_vectors, axis=0)  # Calculate the mean of word embeddings for the document
-            embeddings.append(document_embedding)
-
-        return [embedding.tolist()[0] for embedding in embeddings]
+        return np.vstack([calculate_document_embedding(doc, self.model, self.tokenizer, self.embed_size) for doc in X])
 
 
 class TPSampler:
