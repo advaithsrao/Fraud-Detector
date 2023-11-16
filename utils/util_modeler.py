@@ -132,7 +132,7 @@ class Word2VecEmbedder(BaseEstimator, TransformerMixin):
             document_embedding = np.mean(word_vectors, axis=0)  # Calculate the mean of word embeddings for the document
             embeddings.append(document_embedding)
 
-        return np.array(embeddings)
+        return [embedding.tolist()[0] for embedding in embeddings]
 
 
 class TPSampler:
