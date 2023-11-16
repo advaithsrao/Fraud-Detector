@@ -9,6 +9,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.utils.class_weight import compute_class_weight
+from sklearn.pipeline import Pipeline
 import torch
 from transformers import RobertaTokenizer, RobertaForSequenceClassification, AdamW, get_linear_schedule_with_warmup
 from torch.utils.data import DataLoader, TensorDataset
@@ -316,9 +317,11 @@ class SVMModel:
         self.num_labels = num_labels
         self.kernel = kernel
         self.C = C
-        self.model = SVC(kernel=self.kernel, C=self.C, probability=True, random_state=42, verbose=True, class_weight='balanced')
-        # self.vectorizer = TfidfVectorizer(max_features=512)
         self.vectorizer = Word2VecEmbedder()
+        self.model = Pipeline([
+            ('vectorizer', self.vectorizer),
+            ('classifier', SVC(kernel=self.kernel, C=self.C, probability=True, random_state=42, verbose=True, class_weight='balanced'))
+        ])
 
     def train(
         self,
@@ -339,12 +342,8 @@ class SVMModel:
         if isinstance(label, pd.Series):
             label = label.tolist()
 
-        # Vectorize the input texts
-        X = np.array([self.vectorizer.fit_transform(text) for text in body])
-        y = np.array(label)
-
         # Train the SVM model
-        self.model.fit(X, y)
+        self.model.fit(body, label)
 
     def predict(
         self,
@@ -361,11 +360,8 @@ class SVMModel:
         if isinstance(body, pd.Series):
             body = body.tolist()
 
-        # Vectorize the input texts
-        X = np.array([self.vectorizer.fit_transform(text) for text in body])
-
         # Make predictions using the trained SVM model
-        predictions = self.model.predict(X)
+        predictions = self.model.predict(body)
 
         if isinstance(predictions, np.ndarray):
             predictions = predictions.tolist()

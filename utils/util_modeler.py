@@ -145,9 +145,7 @@ class TPSampler:
         self.tp_ratio = tp_ratio
         self.batch_size = batch_size
 
-    def __iter__(
-        self
-    ):
+    def __iter__(self):
         """Iterate through the sampled indices.
 
         Returns:
@@ -160,8 +158,8 @@ class TPSampler:
         sampled_indices = []
 
         while len(sampled_indices) < num_samples:
-            tp_indices = np.random.choice(self.tp_indices, tp_batch_size, replace=True)
-            non_tp_indices = np.random.choice(self.non_tp_indices, non_tp_batch_size, replace=True)
+            tp_indices = np.random.choice(self.tp_indices, tp_batch_size, replace=False)
+            non_tp_indices = np.random.choice(self.non_tp_indices, non_tp_batch_size, replace=False)
             batch_indices = np.concatenate((tp_indices, non_tp_indices))
             np.random.shuffle(batch_indices)
             sampled_indices.extend(batch_indices)
