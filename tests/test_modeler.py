@@ -79,6 +79,9 @@ def test_evaluate_and_log(x, y_true, y_pred):
     assert os.path.exists('/tmp/test.log')
 
 def test_word2vec_embedding(mail):
+    import nltk
+    nltk.download('stopwords')
+
     embedder = Word2VecEmbedder()
     embedding = embedder.transform(mail)[0]
     assert len(embedding) == 300
