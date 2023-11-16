@@ -43,6 +43,10 @@ jobs:
         poetry install
       working-directory: ${{ github.workspace }}
 
+    - name: NLTK dependancies
+      run: |
+        poetry run python3 -m nltk.downloader stopwords
+
     - name: Run tests
       run: |
         poetry run pytest -n 4 -v tests/
