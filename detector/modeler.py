@@ -12,7 +12,7 @@ from sklearn.utils.class_weight import compute_class_weight
 from sklearn.pipeline import Pipeline
 import torch
 from transformers import RobertaTokenizer, RobertaForSequenceClassification, AdamW, get_linear_schedule_with_warmup
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset#, SubsetRandomSampler
 import wandb
 from mlflow.sklearn import save_model
 from scipy.sparse import hstack
@@ -58,7 +58,7 @@ class RobertaModel:
         body: pd.Series | list[str], 
         label: pd.Series | list[int], 
         validation_size=0.2,
-        wandb = None
+        wandb=None
     ):
         """Trains the model using the given data.
 
@@ -76,7 +76,7 @@ class RobertaModel:
             body = body.tolist()
         if isinstance(label, pd.Series):
             label = label.tolist()
-    
+
         # Tokenize input texts and convert labels to tensors
         input_ids = []
         attention_masks = []
@@ -110,11 +110,8 @@ class RobertaModel:
         train_size = dataset_size - val_size
         train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
 
-        # Create a sampler to sample the training data with a 1:10 ratio of true positives to non-true positives to avoid class imbalance in batches
-        tp_sampler = TPSampler(class_labels=label, tp_ratio=0.1, batch_size=self.batch_size)
-
-        # Create data loaders for training and validation data with the custom sampler
-        train_dataloader = DataLoader(train_dataset, batch_size=self.batch_size, sampler=tp_sampler)
+        # Create data loaders for training and validation data
+        train_dataloader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
         validation_dataloader = DataLoader(val_dataset, batch_size=self.batch_size)
 
         # Initialize the optimizer and learning rate scheduler
@@ -124,7 +121,7 @@ class RobertaModel:
 
         # Initialize variables for early stopping
         best_validation_loss = float("inf")
-        patience = 3  # Number of epochs to wait for improvement
+        patience = 10  # Number of epochs to wait for improvement
         wait = 0
 
         class_weights = compute_class_weight('balanced', classes=np.unique(label), y=label)
@@ -193,7 +190,7 @@ class RobertaModel:
             avg_val_loss = total_eval_loss / len(validation_dataloader)
             print(f'Validation Loss: {avg_val_loss:.4f}')
 
-            if wandb != None:
+            if wandb is not None:
                 wandb.log({
                     'epoch': epoch, 
                     'train_loss': avg_train_loss, 

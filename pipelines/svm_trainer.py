@@ -106,11 +106,19 @@ def data_split(data):
         train = data[
             ~data['Mail-ID'].isin(gold_fraud['Mail-ID']) & ~data['Mail-ID'].isin(sanity['Mail-ID'])
         ]
+
         train['Split'] = 'Train'
+
+        #drop train examples with Label=1 and Body less than 4 words
+        train = train[~((train['Label'] == 1) & (train['Body'].str.split().str.len() < 4))]
+
+        train = train.reset_index(drop=True)
+
     else:
         train = data[data['Split'] == 'Train']
         gold_fraud = data[data['Split'] == 'Gold Fraud']
         sanity = data[data['Split'] == 'Sanity']
+        
     return train, sanity, gold_fraud
 
 def train_model(train_data, hyper_params):

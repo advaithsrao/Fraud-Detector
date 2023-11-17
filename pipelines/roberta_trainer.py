@@ -1,4 +1,4 @@
-#usage: python3 -m pipelines.roberta_trainer --num_epochs 20 --batch_size 8 --num_labels 2 --device 'cuda' --save_path '/tmp'
+#usage: python3 -m pipelines.roberta_trainer --num_epochs 20 --batch_size 8 --num_labels 2 --device 'cuda' --save_path '/tmp' --model_name 'roberta-small'
 import sys
 sys.path.append('..')
 
@@ -31,6 +31,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Roberta Model Fraud Detector Pipeline")
     parser.add_argument("--save_path", "-s", type=str, default='/tmp/', help="Output save path")
     parser.add_argument("--num_labels", "-l", type=int, default=2, help="Number of labels")
+    parser.add_argument("--model_name", "-m", type=str, default='roberta-base', help="Model Name")
     parser.add_argument("--num_epochs", "-e", type=int, default=40, help="Number of epochs")
     parser.add_argument("--batch_size", "-b", type=int, default=128, help="Batch size")
     parser.add_argument("--device", "-d", type=str, default='cpu', help="Device to train the model on: 'cpu', 'cuda' or 'gpu'")
@@ -77,6 +78,7 @@ def label_and_preprocess_data(data):
             axis=0,
             ignore_index=True
         )
+
     return data
 
 def data_split(data):
@@ -107,11 +109,19 @@ def data_split(data):
         train = data[
             ~data['Mail-ID'].isin(gold_fraud['Mail-ID']) & ~data['Mail-ID'].isin(sanity['Mail-ID'])
         ]
+
         train['Split'] = 'Train'
+        
+        #drop train examples with Label=1 and Body less than 4 words
+        train = train[~((train['Label'] == 1) & (train['Body'].str.split().str.len() < 4))]
+
+        train = train.reset_index(drop=True)
+
     else:
         train = data[data['Split'] == 'Train']
         gold_fraud = data[data['Split'] == 'Gold Fraud']
         sanity = data[data['Split'] == 'Sanity']
+    
     return train, sanity, gold_fraud
 
 def train_model(train_data, hyper_params):
