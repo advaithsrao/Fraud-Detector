@@ -1,4 +1,4 @@
-#usage: python3 -m pipelines.roberta_trainer --num_epochs 20 --batch_size 8 --num_labels 2 --device 'cuda' --save_path '/tmp' --model_name 'roberta-base'
+#usage: python3 -m pipelines.distilbert_trainer --num_epochs 20 --batch_size 8 --num_labels 2 --device 'cuda' --save_path '/tmp' --model_name 'distilbert-base-uncased'
 import sys
 sys.path.append('..')
 
@@ -12,7 +12,7 @@ import os
 
 from detector.data_loader import LoadEnronData, LoadPhishingData, LoadSocEnggData
 from detector.labeler import EnronLabeler
-from detector.modeler import RobertaModel
+from detector.modeler import DistilbertModel
 from detector.preprocessor import Preprocessor
 from utils.util_modeler import evaluate_and_log, get_f1_score
 
@@ -28,10 +28,10 @@ config.read(
 )
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Roberta Model Fraud Detector Pipeline")
+    parser = argparse.ArgumentParser(description="Distilbert Model Fraud Detector Pipeline")
     parser.add_argument("--save_path", "-s", type=str, default='/tmp/', help="Output save path")
     parser.add_argument("--num_labels", "-l", type=int, default=2, help="Number of labels")
-    parser.add_argument("--model_name", "-m", type=str, default='roberta-base', help="Model Name")
+    parser.add_argument("--model_name", "-m", type=str, default='distilbert-base-uncased', help="Model Name")
     parser.add_argument("--num_epochs", "-e", type=int, default=40, help="Number of epochs")
     parser.add_argument("--batch_size", "-b", type=int, default=128, help="Batch size")
     parser.add_argument("--device", "-d", type=str, default='cpu', help="Device to train the model on: 'cpu', 'cuda' or 'gpu'")
@@ -126,7 +126,7 @@ def data_split(data):
 
 def train_model(train_data, hyper_params):
     run = wandb.init(config=hyper_params)
-    model = RobertaModel(**hyper_params)
+    model = DistilbertModel(**hyper_params)
 
     # os.makedirs(f'/tmp/{date}/logs', exist_ok=True)
 
