@@ -68,9 +68,6 @@ def label_and_preprocess_data(data):
         data['LoadPhishingData']['Body'] = data['LoadPhishingData']['Body'].swifter.apply(Preprocessor())
         data['LoadSocEnggData']['Body'] = data['LoadSocEnggData']['Body'].swifter.apply(Preprocessor())
 
-        # Run Mismatch Labeler
-        data = MismatchLabeler(data)()
-
         # Concatenate the 3 data sources into 1
         data = pd.concat(
             [
@@ -79,6 +76,12 @@ def label_and_preprocess_data(data):
             axis=0,
             ignore_index=True
         )
+
+        # Run Mismatch Labeler
+        data = MismatchLabeler(data)()
+
+        data.reset_index(drop=True, inplace=True)
+
     return data
 
 def data_split(data):

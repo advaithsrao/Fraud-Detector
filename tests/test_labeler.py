@@ -78,11 +78,11 @@ def test_mismatch_labeler(dataframe):
     assert len(data[((data['Label'] == 1) & (data['Body'].str.split().str.len() > max_length))]) == 0
 
     #drop by pattern function
-    assert len(data[((data['Label'] == 1) & data['Body'].str.contains('best regards', case=False, regex=True))])
-    assert len(data[((data['Label'] == 1) & data['Body'].str.contains('from:', case=False, regex=True))])
+    assert len(data[((data['Label'] == 1) & data['Body'].str.contains('best regards', case=False, regex=True))]) == 0
+    assert len(data[((data['Label'] == 1) & data['Body'].str.contains('from:', case=False, regex=True))]) == 0
 
     #relabel marketing function
-    assert len(data[((data['Label'] == 1) & data['Body'].str.contains('unsubscribe', case=False, regex=True))])
+    assert len(data[((data['Label'] == 1) & data['Body'].str.contains('unsubscribe', case=False, regex=True))]) == 0
 
 if __name__ == "__main__":
     pytest.main()
