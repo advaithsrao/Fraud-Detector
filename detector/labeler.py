@@ -598,6 +598,7 @@ class MismatchLabeler:
             data = self.data
         
         patterns = [
+            r'' + config.get('labeler.mismatch', 'best_regards'),
             r'' + config.get('labeler.mismatch', 'sincerely'),
             r'' + config.get('labeler.mismatch', 'regards'),
             r'' + config.get('labeler.mismatch', 'your_sincerely'),
@@ -619,7 +620,7 @@ class MismatchLabeler:
         # Create a temporary column without Subject
         data['Temp_Body'] = data.swifter.apply(lambda row: row['Body'].replace(row['Subject'], '') if pd.notna(row['Subject']) else row['Body'], axis=1)
 
-        combined_pattern = '|'.join(f'(?:{re.escape(pattern)})' for pattern in patterns)
+        combined_pattern = '|'.join(f'(?:^|^\s|^>)(?: |){pattern}' for pattern in patterns)
 
         # Filter out rows where Label is 1 and any pattern matches
         data = data[~((data['Label'] == 1) & data['Temp_Body'].str.contains(combined_pattern, case=False, regex=True))]

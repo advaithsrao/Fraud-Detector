@@ -60,7 +60,7 @@ In the early 2000s, Leslie Kaelbling at MIT purchased the dataset and noted that
 
 | Set | Emails |
 | --- | --- |
-| Train | 227310 |
+| Train | 227007  |
 | Sanity | 250000 |
 | Gold Fraud | 1000 | 
 
@@ -68,8 +68,8 @@ In the early 2000s, Leslie Kaelbling at MIT purchased the dataset and noted that
 
 | Label | Emails |
 | --- | --- |
-| 0 | 216270 |
-| 1 | 11040 |
+| 0 | 216041 |
+| 1 | 10966 |
 
 
 ***
