@@ -60,16 +60,16 @@ In the early 2000s, Leslie Kaelbling at MIT purchased the dataset and noted that
 
 | Set | Emails |
 | --- | --- |
-| Train | 304235 |
-| Sanity | 200000 |
+| Train | 224543  |
+| Sanity | 250000 |
 | Gold Fraud | 1000 | 
 
 **Training Label Split:**
 
 | Label | Emails |
 | --- | --- |
-| 0 | 288428 |
-| 1 | 15807 |
+| 0 | 214080 |
+| 1 | 10463 |
 
 
 ***

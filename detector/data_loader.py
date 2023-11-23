@@ -182,8 +182,8 @@ class LoadEnronData:
 
         email_fields = {}
 
-        folder_user = file.split(self.localpath)[1].split('/')[0]
-        folder_name = file.split(self.localpath)[1].split('/')[1]
+        folder_user = file.split(self.localpath)[1].split('/')[1]
+        folder_name = file.split(self.localpath)[1].split('/')[2]
 
         email_fields['Folder-User'] = folder_user
         email_fields['Folder-Name'] = folder_name

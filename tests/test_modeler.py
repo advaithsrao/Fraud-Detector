@@ -11,7 +11,7 @@ from numpy import array
 import pytest
 
 from utils.util_modeler import evaluate_and_log, get_f1_score, get_classification_report_confusion_matrix, Word2VecEmbedder, TPSampler
-
+from utils.util_data_loader import sha256_hash
 
 @pytest.fixture
 def x():
@@ -26,6 +26,10 @@ def y_pred():
     return [0, 1]
 
 @pytest.fixture
+def id():
+    return [sha256_hash('Give me your account number quick'), sha256_hash('Give me your account number quick')]
+
+@pytest.fixture
 def mail():
     return """
     I would like to get some of the timing issues resolved prior to
@@ -38,8 +42,10 @@ def mail():
     """
 
 def test_get_f1_score(y_true, y_pred):
-    f1_score = get_f1_score(y_true, y_pred)
-    assert round(f1_score,3) == 0.667
+    macro_f1_score = get_f1_score(y_true, y_pred, average='macro')
+    weighted_f1_score = get_f1_score(y_true, y_pred, average='weighted')
+    assert round(macro_f1_score,3) == 0.667
+    assert round(weighted_f1_score,3) == 0.667
 
 def test_get_classification_report_confusion_matrix(y_true, y_pred):
     class_report, conf_matrix = get_classification_report_confusion_matrix(y_true, y_pred)
@@ -74,8 +80,8 @@ def test_get_classification_report_confusion_matrix(y_true, y_pred):
 
     assert (conf_matrix == np.array([[0, 0], [1, 1]])).all()
 
-def test_evaluate_and_log(x, y_true, y_pred):
-    evaluate_and_log(x, y_true, y_pred, '/tmp/test.log')
+def test_evaluate_and_log(x, y_true, y_pred, id):
+    evaluate_and_log(x=x, y_true=y_true, y_pred=y_pred, filename='/tmp/test.log', id=id)
     assert os.path.exists('/tmp/test.log')
 
 def test_word2vec_embedding(mail):

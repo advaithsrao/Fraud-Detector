@@ -328,21 +328,17 @@ class EnronLabeler:
         if data is None:
             data = self.data
 
+        reply_patterns = self.config.get('labeler.mismatch','replies')
+        pattern = fr'\b(?:{reply_patterns})\b'
+        
         data['Contains-Reply-Forwards'] = data['Body'].swifter.apply(
-            lambda x: True \
-                if \
-                    'Re:' in x \
-                    or \
-                    'RE:' in x \
-                    or \
-                    'Fw:' in x \
-                    or \
-                    'FW:' in x \
-                    or \
-                    'Fwd:' in x \
-                    or \
-                    'FWD:' in x \
-                else False
+            lambda x: bool(
+                re.search(
+                    pattern, 
+                    x, 
+                    flags=re.IGNORECASE
+                )
+            )
         )
 
         return data
@@ -512,3 +508,155 @@ class EnronLabeler:
         )
 
         return data
+
+class MismatchLabeler:
+    """Class to relabel the mismatch examples from our dataset
+
+    Args:
+        data (pd.DataFrame): DataFrame
+        cfg (configparser.ConfigParser): ConfigParser object to read config.ini file
+    
+    Returns:
+        data (pd.DataFrame): DataFrame containing the relabeled data with labeling updates
+    """
+    
+    def __init__(
+        self, 
+        data: pd.DataFrame = None,
+        cfg: configparser.ConfigParser = None,
+    ):
+        
+        self.data = data
+        self.config = cfg
+
+        if self.data is None:
+            raise ValueError('data not provided')
+        
+        if self.config is None:
+            self.config = config
+    
+    def __call__(
+        self
+    ) -> pd.DataFrame:
+        
+        """Call the Pipeline to label the enron data
+
+        Returns:
+            pd.DataFrame: DataFrame containing the enron data with labels
+        """
+
+        self.data = self.drop_by_length(self.data)
+        print(f'\x1b[4mMismatchLabeler\x1b[0m: Dropped examples with body length less than 4 words and more than 600 words')
+
+        self.data = self.drop_by_pattern(self.data)
+        print(f'\x1b[4mMismatchLabeler\x1b[0m: Dropped examples with body containing the given pattern')
+
+        self.data = self.relabel_marketing_frauds(self.data)
+        print(f'\x1b[4mMismatchLabeler\x1b[0m: Relabeled marketing examples with label 1 to label 0 using marketing keywords')
+
+        return self.data
+    
+    def drop_by_length(
+        self,
+        data: pd.DataFrame = None,
+    ) -> pd.DataFrame:
+        """Drop the fraud examples with body length less than 4 words and more than 600 words
+
+        Args:
+            data (pd.DataFrame, optional): DataFrame containing the enron data. Defaults to None.
+
+        Returns:
+            data (pd.DataFrame): DataFrame containing the enron data with examples dropped
+        """
+
+        if data is None:
+            data = self.data
+        
+        drop_threshold = self.config.get('labeler.mismatch','drop_threshold')
+        min_length, max_length = convert_string_to_list(drop_threshold, sep = '&')
+        min_length, max_length = int(min_length), int(max_length)
+
+        data = data[~((data['Label'] == 1) & (data['Body'].str.split().str.len() < min_length))]
+        data = data[~((data['Label'] == 1) & (data['Body'].str.split().str.len() > max_length))]
+        
+        return data
+    
+    def drop_by_pattern(
+        self,
+        data: pd.DataFrame = None,
+    ) -> pd.DataFrame:
+        """Drop the fraud examples with body containing the given pattern
+
+        Args:
+            data (pd.DataFrame, optional): DataFrame containing the enron data. Defaults to None.
+
+        Returns:
+            data (pd.DataFrame): DataFrame containing the enron data with examples dropped
+        """
+
+        if data is None:
+            data = self.data
+        
+        patterns = [
+            r'' + config.get('labeler.mismatch', 'best_regards'),
+            r'' + config.get('labeler.mismatch', 'sincerely'),
+            r'' + config.get('labeler.mismatch', 'regards'),
+            r'' + config.get('labeler.mismatch', 'your_sincerely'),
+            r'' + config.get('labeler.mismatch', 'yours_sincerely'),
+            r'' + config.get('labeler.mismatch', 'yours_truly'),
+            r'' + config.get('labeler.mismatch', 'yours_faithfully'),
+            r'' + config.get('labeler.mismatch', 'thanks'),
+            r'' + config.get('labeler.mismatch', 'thank_you'),
+            r'' + config.get('labeler.mismatch', 'message_id'),
+            r'' + config.get('labeler.mismatch', 'from'),
+            r'' + config.get('labeler.mismatch', 'sent'),
+            r'' + config.get('labeler.mismatch', 'to'),
+            r'' + config.get('labeler.mismatch', 'cc'),
+            r'' + config.get('labeler.mismatch', 'undelivery'),
+            r'' + config.get('labeler.mismatch', 'undeliverable'),
+            r'' + config.get('labeler.mismatch', 'missed_reply')
+        ]
+
+        # Create a temporary column without Subject
+        data['Temp_Body'] = data.swifter.apply(lambda row: row['Body'].replace(row['Subject'], '') if pd.notna(row['Subject']) else row['Body'], axis=1)
+
+        combined_pattern = '|'.join(f'(?:^|^\s|^>|^ >)(?: |){pattern}' for pattern in patterns)
+
+        # Filter out rows where Label is 1 and any pattern matches
+        data = data[~((data['Label'] == 1) & data['Temp_Body'].str.contains(combined_pattern, case=False, regex=True))]
+
+        # Drop the temporary column
+        data = data.drop(columns=['Temp_Body'])
+
+        return data
+    
+    def relabel_marketing_frauds(
+        self,
+        data: pd.DataFrame = None,
+    ) -> pd.DataFrame:
+        """Relabel the marketing examples with label 1 to label 0 using marketing keywords
+
+        Args:
+            data (pd.DataFrame, optional): DataFrame containing the enron data. Defaults to None.
+
+        Returns:
+            data (pd.DataFrame): DataFrame containing the enron data with new column 'Label' 
+            -> Label of the email
+        """
+        
+        if data is None:
+            data = self.data
+        
+        marketing_keywords = self.config.get('labeler.mismatch','marketing')
+        
+        data.loc[
+            (data['Label'] == 1) & \
+            data['Body'].str.contains(
+                marketing_keywords,
+                case=False, regex=True
+            ), 
+            'Label'
+        ] = 0
+    
+        return data
+    

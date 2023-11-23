@@ -1,6 +1,7 @@
 import sys
 sys.path.append("..")
 
+import os
 import re
 import html2text
 from typing import Any
@@ -8,7 +9,31 @@ import numpy as np
 
 from utils.util_preprocessor import add_subject_to_body
 
+#read config.ini file
+import configparser
+config = configparser.ConfigParser()
+config.read(
+    os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        '../config.ini'
+    )
+)
 class Preprocessor:
+    def __init__(
+        self,
+        cfg: configparser.ConfigParser = None,
+    ) -> None:
+        """Preprocessor class
+
+        Args:
+            cfg (configparser.ConfigParser, optional): ConfigParser object. Defaults to None.
+        """
+
+        self.config = cfg
+
+        if self.config is None:
+            self.config = config
+
     def __call__(
         self, 
         text: str,
@@ -115,7 +140,9 @@ class Preprocessor:
             text (str): text with unicode characters removed
         """
 
-        return re.sub(r'[^\x00-\x7F]+', ' ', text)
+        unicode_pattern = r'' + config.get('preprocessor.patterns', 'unicode')
+
+        return re.sub(unicode_pattern, ' ', text)
 
     def remove_specific_patterns(
         self,
@@ -130,19 +157,26 @@ class Preprocessor:
             text (str): text with patterns removed
         """
 
-        message_type = [
-            r'-+Original Message-+'
+        # Extract patterns from the [preprocessor.patterns] section
+        message_pattern = r'' + config.get('preprocessor.patterns', 'message')
+        forward_pattern = r'' + config.get('preprocessor.patterns', 'forward')
+        from_pattern = r'' + config.get('preprocessor.patterns', 'from')
+        sent_pattern = r'' + config.get('preprocessor.patterns', 'sent')
+        to_pattern = r'' + config.get('preprocessor.patterns', 'to')
+        cc_pattern = r'' + config.get('preprocessor.patterns', 'cc')
+        subject_pattern = r'' + config.get('preprocessor.patterns', 'subject')
+
+        patterns = [
+            message_pattern,
+            forward_pattern,
+            from_pattern,
+            sent_pattern,
+            to_pattern,
+            cc_pattern,
+            subject_pattern
         ]
 
-        header_type = [
-            r'From:.+?(?=Sent:)',
-            r'Sent:.+?(?=To:)',
-            r'To:.+?(?=Cc:)',
-            r'Cc:.+?(?=Subject:)',
-            r'Subject:.+?(\n|$)'
-        ]
-
-        for pattern in message_type + header_type:
+        for pattern in patterns:
             text = re.sub(pattern, ' ', text, flags = re.DOTALL | re.IGNORECASE)
 
         return text
