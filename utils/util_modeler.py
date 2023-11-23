@@ -15,19 +15,21 @@ nltk.download('stopwords')
 
 def get_f1_score(
     y_true: list[int],
-    y_pred: list[int]
+    y_pred: list[int],
+    average: str = 'weighted'
     ):
     """Returns the F1 score.
 
     Args:
         y_true (list[int]): The true labels.
         y_pred (list[int]): The predicted labels.
+        average (str, optional): The averaging method. Defaults to 'weighted'.
 
     Returns:
         float: The F1 score.
     """
 
-    return f1_score(y_true, y_pred)
+    return f1_score(y_true, y_pred, average='weighted')
 
 def get_classification_report_confusion_matrix(
     y_true: list[int],
@@ -50,7 +52,8 @@ def evaluate_and_log(
     y_true: list[int], 
     y_pred: list[int], 
     filename: str,
-    experiment: wandb = None
+    experiment: wandb = None,
+    id: list[str] = None
     ):
     """Evaluates the model's performance and logs the results.
 
@@ -60,6 +63,9 @@ def evaluate_and_log(
         y_pred (list[int]): The predicted labels.
         filename (str): The name of the log file.
     """
+    
+    if id is None:
+        id = [str(i) for i in range(len(x))]
     
     if len(x) != len(y_true) or len(x) != len(y_pred):
         raise ValueError("Input lists (x, y_true, and y_pred) must have the same length.")
@@ -76,7 +82,7 @@ def evaluate_and_log(
 
     for i in mismatched_indices:
         # Format the mismatched example in a code block
-        mismatched_example = f"\nActual: {y_true[i]}\nPredicted: {y_pred[i]}\n\nText: {x[i]}\n\n"
+        mismatched_example = f"\nMail ID: {id[i]}\nActual: {y_true[i]}\nPredicted: {y_pred[i]}\n\nText: {x[i]}\n\n"
         mismatched_examples.append(mismatched_example)
 
         if experiment is not None:
