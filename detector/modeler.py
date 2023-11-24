@@ -105,7 +105,7 @@ class RobertaModel:
         # Convert lists to tensors
         input_ids = torch.cat(input_ids, dim=0)
         attention_masks = torch.cat(attention_masks, dim=0)
-        label_ids = torch.stack(label_ids)  # Create a 1D tensor for label_ids
+        label_ids = torch.stack(label_ids).squeeze()  # Create a 1D tensor for label_ids
 
         # Split the data into train and validation sets
         dataset = TensorDataset(input_ids, attention_masks, label_ids)
@@ -153,7 +153,7 @@ class RobertaModel:
                 logits = outputs.logits  # Use logits attribute to get the predicted logits
 
                 # Calculate the loss using the weighted loss function
-                loss = loss_function(logits, b_labels)
+                loss = loss_function(logits.squeeze(), b_labels)
                 total_train_loss += loss.item()
 
                 loss.backward()
@@ -393,7 +393,7 @@ class DistilbertModel:
         # Convert lists to tensors
         input_ids = torch.cat(input_ids, dim=0)
         attention_masks = torch.cat(attention_masks, dim=0)
-        label_ids = torch.stack(label_ids)  # Create a 1D tensor for label_ids
+        label_ids = torch.stack(label_ids).squeeze()  # Create a 1D tensor for label_ids
 
         # Split the data into train and validation sets
         dataset = TensorDataset(input_ids, attention_masks, label_ids)
@@ -439,9 +439,9 @@ class DistilbertModel:
                 self.model.zero_grad()
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
                 logits = outputs.logits
-                
+
                 # Calculate the loss using the weighted loss function
-                loss = loss_function(logits, b_labels)
+                loss = loss_function(logits.squeeze(), b_labels)
                 total_train_loss += loss.item()
 
                 loss.backward()
