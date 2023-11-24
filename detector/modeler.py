@@ -133,7 +133,8 @@ class RobertaModel:
 
         # Define the loss function with class weights
         # loss_function = torch.nn.CrossEntropyLoss(weight=class_weights)
-        loss_function = torch.nn.BCEWithLogitsLoss(pos_weight=class_weights[1])
+        pos_weight = torch.tensor(class_weights[1], dtype=torch.float32).to(self.device)
+        loss_function = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
         for epoch in range(self.num_epochs):
             print(f'{"="*20} Epoch {epoch + 1}/{self.num_epochs} {"="*20}')
@@ -149,7 +150,7 @@ class RobertaModel:
 
                 self.model.zero_grad()
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-                logits = outputs[1]
+                logits = outputs.logits  # Use logits attribute to get the predicted logits
 
                 # Calculate the loss using the weighted loss function
                 loss = loss_function(logits, b_labels)
@@ -181,9 +182,10 @@ class RobertaModel:
 
                 with torch.no_grad():
                     outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-                    loss = outputs[0]
-                    logits = outputs[1]
-
+                    # loss = outputs[0]
+                    logits = outputs.logits
+                
+                loss = loss_function(logits, b_labels)
                 total_eval_loss += loss.item()
                 logits = logits.detach().to(self.device).numpy()
                 label_ids = b_labels.to(self.device).numpy()
@@ -263,7 +265,7 @@ class RobertaModel:
 
             with torch.no_grad():
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask)
-                logits = outputs[0]
+                logits = outputs.logits
 
             logits = logits.detach().cpu().numpy()
 
@@ -419,7 +421,8 @@ class DistilbertModel:
 
         # Define the loss function with class weights
         # loss_function = torch.nn.CrossEntropyLoss(weight=class_weights)
-        loss_function = torch.nn.BCEWithLogitsLoss(pos_weight=class_weights[1])
+        pos_weight = torch.tensor(class_weights[1], dtype=torch.float32).to(self.device)
+        loss_function = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
         for epoch in range(self.num_epochs):
             print(f'{"="*20} Epoch {epoch + 1}/{self.num_epochs} {"="*20}')
@@ -435,8 +438,8 @@ class DistilbertModel:
 
                 self.model.zero_grad()
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-                logits = outputs[1]
-
+                logits = outputs.logits
+                
                 # Calculate the loss using the weighted loss function
                 loss = loss_function(logits, b_labels)
                 total_train_loss += loss.item()
@@ -467,9 +470,9 @@ class DistilbertModel:
 
                 with torch.no_grad():
                     outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-                    loss = outputs[0]
-                    logits = outputs[1]
-
+                    logits = outputs.logits
+                
+                loss = loss_function(logits, b_labels)
                 total_eval_loss += loss.item()
                 logits = logits.detach().to(self.device).numpy()
                 label_ids = b_labels.to(self.device).numpy()
