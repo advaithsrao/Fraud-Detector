@@ -1,5 +1,5 @@
 import os
-# os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 
 import shutil
 import pandas as pd
@@ -196,8 +196,8 @@ class RobertaModel:
                 # Calculate the loss using the weighted loss function
                 loss = loss_function(logits, b_labels_one_hot)
                 total_eval_loss += loss.item()
-                logits = logits.detach().to(self.device).numpy()
-                label_ids = b_labels.to(self.device).numpy()
+                logits = logits.detach().cpu().numpy()
+                label_ids = b_labels.detach().cpu().numpy()
                 total_eval_accuracy += self.accuracy(logits, label_ids)
 
             avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
@@ -490,8 +490,8 @@ class DistilbertModel:
                 # Calculate the loss using the weighted loss function
                 loss = loss_function(logits, b_labels_one_hot)
                 total_eval_loss += loss.item()
-                logits = logits.detach().to(self.device).numpy()
-                label_ids = b_labels.to(self.device).numpy()
+                logits = logits.detach().cpu().numpy()
+                label_ids = b_labels.detach().cpu().numpy()
                 total_eval_accuracy += self.accuracy(logits, label_ids)
 
             avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
