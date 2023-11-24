@@ -1,5 +1,5 @@
 import os
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
+# os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 
 import shutil
 import pandas as pd
@@ -17,6 +17,8 @@ from transformers import DistilBertTokenizer, DistilBertForSequenceClassificatio
 from transformers import AdamW, get_linear_schedule_with_warmup
 
 from torch.utils.data import DataLoader, TensorDataset#, SubsetRandomSampler
+import torch.nn.functional as F
+
 import wandb
 from mlflow.sklearn import save_model
 from scipy.sparse import hstack
@@ -105,7 +107,7 @@ class RobertaModel:
         # Convert lists to tensors
         input_ids = torch.cat(input_ids, dim=0)
         attention_masks = torch.cat(attention_masks, dim=0)
-        label_ids = torch.stack(label_ids).squeeze()  # Create a 1D tensor for label_ids
+        label_ids = torch.stack(label_ids)
 
         # Split the data into train and validation sets
         dataset = TensorDataset(input_ids, attention_masks, label_ids)
@@ -152,8 +154,11 @@ class RobertaModel:
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
                 logits = outputs.logits  # Use logits attribute to get the predicted logits
 
+                # Convert labels to one-hot encoding
+                b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
+
                 # Calculate the loss using the weighted loss function
-                loss = loss_function(logits.squeeze(), b_labels)
+                loss = loss_function(logits, b_labels_one_hot)
                 total_train_loss += loss.item()
 
                 loss.backward()
@@ -185,7 +190,11 @@ class RobertaModel:
                     # loss = outputs[0]
                     logits = outputs.logits
                 
-                loss = loss_function(logits, b_labels)
+                # Convert labels to one-hot encoding
+                b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
+
+                # Calculate the loss using the weighted loss function
+                loss = loss_function(logits, b_labels_one_hot)
                 total_eval_loss += loss.item()
                 logits = logits.detach().to(self.device).numpy()
                 label_ids = b_labels.to(self.device).numpy()
@@ -393,7 +402,7 @@ class DistilbertModel:
         # Convert lists to tensors
         input_ids = torch.cat(input_ids, dim=0)
         attention_masks = torch.cat(attention_masks, dim=0)
-        label_ids = torch.stack(label_ids).squeeze()  # Create a 1D tensor for label_ids
+        label_ids = torch.stack(label_ids)
 
         # Split the data into train and validation sets
         dataset = TensorDataset(input_ids, attention_masks, label_ids)
@@ -440,8 +449,11 @@ class DistilbertModel:
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
                 logits = outputs.logits
 
+                # Convert labels to one-hot encoding
+                b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
+
                 # Calculate the loss using the weighted loss function
-                loss = loss_function(logits.squeeze(), b_labels)
+                loss = loss_function(logits, b_labels_one_hot)
                 total_train_loss += loss.item()
 
                 loss.backward()
@@ -472,7 +484,11 @@ class DistilbertModel:
                     outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
                     logits = outputs.logits
                 
-                loss = loss_function(logits, b_labels)
+                # Convert labels to one-hot encoding
+                b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
+
+                # Calculate the loss using the weighted loss function
+                loss = loss_function(logits, b_labels_one_hot)
                 total_eval_loss += loss.item()
                 logits = logits.detach().to(self.device).numpy()
                 label_ids = b_labels.to(self.device).numpy()
@@ -552,7 +568,7 @@ class DistilbertModel:
 
             with torch.no_grad():
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask)
-                logits = outputs[0]
+                logits = outputs.logits
 
             logits = logits.detach().cpu().numpy()
 
