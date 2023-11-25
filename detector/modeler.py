@@ -150,9 +150,9 @@ class RobertaModel:
                 b_input_mask = batch[1].to(self.device)
                 b_labels = batch[2].to(self.device)
 
-                self.model.zero_grad()
+                # Forward pass
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-                logits = outputs.logits  # Use logits attribute to get the predicted logits
+                logits = outputs.logits
 
                 # Convert labels to one-hot encoding
                 b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
@@ -161,8 +161,10 @@ class RobertaModel:
                 loss = loss_function(logits, b_labels_one_hot)
                 total_train_loss += loss.item()
 
+                # Backward pass
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+
+                # Update the model parameters
                 optimizer.step()
                 scheduler.step()
 
@@ -445,7 +447,7 @@ class DistilbertModel:
                 b_input_mask = batch[1].to(self.device)
                 b_labels = batch[2].to(self.device)
 
-                self.model.zero_grad()
+                # Forward pass
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
                 logits = outputs.logits
 
@@ -456,8 +458,10 @@ class DistilbertModel:
                 loss = loss_function(logits, b_labels_one_hot)
                 total_train_loss += loss.item()
 
+                # Backward pass
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+
+                # Update the model parameters
                 optimizer.step()
                 scheduler.step()
 
