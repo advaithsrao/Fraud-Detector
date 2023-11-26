@@ -264,7 +264,7 @@ class RobertaModel:
             with torch.no_grad():
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask)
                 loss = outputs[0]
-                logits = F.softmax(outputs[1], dim=1)   # Taking the softmax of output
+                logits = F.softmax(outputs[1])   # Taking the softmax of output
 
             _, prediction= torch.max(logits, dim=1)
 
@@ -552,7 +552,7 @@ class DistilbertModel:
             with torch.no_grad():
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask)
                 loss = outputs[0]
-                logits = F.softmax(outputs[1], dim=1)   # Taking the softmax of output
+                logits = F.softmax(outputs[1])   # Taking the softmax of output
 
             _, prediction= torch.max(logits, dim=1)
 
