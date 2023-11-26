@@ -263,12 +263,16 @@ class RobertaModel:
 
             with torch.no_grad():
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask)
-                loss = outputs[0]
-                logits = F.softmax(outputs[1])   # Taking the softmax of output
+                # loss = outputs[0]
+                # logits = F.softmax(outputs[1])   # Taking the softmax of output
+                logits = outputs.logits
 
-            _, prediction= torch.max(logits, dim=1)
+            logits = logits.detach().cpu().numpy()
 
-            predictions.extend(prediction.cpu().numpy().tolist())
+            # Apply a threshold (e.g., 0.5) to convert logits to class predictions
+            class_predictions = np.argmax(logits, axis=1)
+            
+            predictions.extend(class_predictions.tolist())
 
         return predictions
     
@@ -551,12 +555,16 @@ class DistilbertModel:
 
             with torch.no_grad():
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask)
-                loss = outputs[0]
-                logits = F.softmax(outputs[1])   # Taking the softmax of output
+                # loss = outputs[0]
+                # logits = F.softmax(outputs[1])   # Taking the softmax of output
+                logits = outputs.logits
 
-            _, prediction= torch.max(logits, dim=1)
+            logits = logits.detach().cpu().numpy()
 
-            predictions.extend(prediction.cpu().numpy().tolist())
+            # Apply a threshold (e.g., 0.5) to convert logits to class predictions
+            class_predictions = np.argmax(logits, axis=1)
+            
+            predictions.extend(class_predictions.tolist())
 
         return predictions
     
