@@ -145,7 +145,7 @@ class RobertaModel:
                 # Forward pass
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
                 loss = outputs[0]
-                logits = outputs[1]
+                logits = F.softmax(outputs[1], dim=1)   # Taking the softmax of output
 
                 total_train_loss += loss.item()
 
@@ -180,11 +180,13 @@ class RobertaModel:
                 with torch.no_grad():
                     outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
                     loss = outputs[0]
-                    logits = outputs[1]
+                    logits = F.softmax(outputs[1], dim=1)   # Taking the softmax of output
                 
                 total_eval_loss += loss.item()
-                logits = logits.detach().cpu().numpy()
-                label_ids = b_labels.detach().cpu().numpy()
+                
+                # logits = logits.detach().cpu().numpy()
+                # label_ids = b_labels.detach().cpu().numpy()
+
                 total_eval_accuracy += self.accuracy(logits, label_ids)
 
             avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
@@ -262,7 +264,7 @@ class RobertaModel:
             with torch.no_grad():
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask)
                 loss = outputs[0]
-                logits = outputs[1]
+                logits = F.softmax(outputs[1], dim=1)   # Taking the softmax of output
 
             _, prediction= torch.max(logits, dim=1)
 
@@ -294,13 +296,18 @@ class RobertaModel:
         """Calculates the accuracy of the model.
 
         Args:
-            preds (np.array): The predictions of the model.
-            labels (np.array): The labels of the data.
+            preds (torch.Tensor|numpy.ndarray): The predictions of the model.
+            labels (torch.Tensor|numpy.ndarray): The labels of the data.
 
         Returns:
             float: The accuracy of the model.
         """
 
+        if isinstance(preds, np.ndarray):
+            preds = torch.from_numpy(preds)
+        if isinstance(labels, np.ndarray):
+            labels = torch.from_numpy(labels)
+        
         _, preds = torch.max(preds, dim=1)
         
         return torch.tensor(torch.sum(preds == labels).item() / len(preds))
@@ -426,7 +433,7 @@ class DistilbertModel:
                 # Forward pass
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
                 loss = outputs[0]
-                logits = outputs[1]
+                logits = F.softmax(outputs[1], dim=1)   # Taking the softmax of output
 
                 total_train_loss += loss.item()
 
@@ -461,11 +468,13 @@ class DistilbertModel:
                 with torch.no_grad():
                     outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
                     loss = outputs[0]
-                    logits = outputs[1]
+                    logits = F.softmax(outputs[1], dim=1)   # Taking the softmax of output
                 
                 total_eval_loss += loss.item()
-                logits = logits.detach().cpu().numpy()
-                label_ids = b_labels.detach().cpu().numpy()
+                
+                # logits = logits.detach().cpu().numpy()
+                # label_ids = b_labels.detach().cpu().numpy()
+
                 total_eval_accuracy += self.accuracy(logits, label_ids)
 
             avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
@@ -543,7 +552,7 @@ class DistilbertModel:
             with torch.no_grad():
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask)
                 loss = outputs[0]
-                logits = outputs[1]
+                logits = F.softmax(outputs[1], dim=1)   # Taking the softmax of output
 
             _, prediction= torch.max(logits, dim=1)
 
@@ -575,13 +584,18 @@ class DistilbertModel:
         """Calculates the accuracy of the model.
 
         Args:
-            preds (np.array): The predictions of the model.
-            labels (np.array): The labels of the data.
+            preds (torch.Tensor|numpy.ndarray): The predictions of the model.
+            labels (torch.Tensor|numpy.ndarray): The labels of the data.
 
         Returns:
             float: The accuracy of the model.
         """
 
+        if isinstance(preds, np.ndarray):
+            preds = torch.from_numpy(preds)
+        if isinstance(labels, np.ndarray):
+            labels = torch.from_numpy(labels)
+        
         _, preds = torch.max(preds, dim=1)
         
         return torch.tensor(torch.sum(preds == labels).item() / len(preds))
