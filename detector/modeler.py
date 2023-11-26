@@ -127,16 +127,8 @@ class RobertaModel:
 
         # Initialize variables for early stopping
         best_validation_loss = float("inf")
-        patience = 3  # Number of epochs to wait for improvement
+        patience = 5  # Number of epochs to wait for improvement
         wait = 0
-
-        class_weights = compute_class_weight('balanced', classes=np.unique(label), y=label)
-        class_weights = torch.tensor(class_weights, dtype=torch.float32).to(self.device)
-
-        # Define the loss function with class weights
-        # loss_function = torch.nn.CrossEntropyLoss(weight=class_weights)
-        pos_weight = torch.tensor(class_weights[1], dtype=torch.float32).to(self.device)
-        loss_function = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
         for epoch in range(self.num_epochs):
             print(f'{"="*20} Epoch {epoch + 1}/{self.num_epochs} {"="*20}')
@@ -152,18 +144,9 @@ class RobertaModel:
 
                 # Forward pass
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-                logits = outputs.logits
-                
-                # sigmoid_output = torch.sigmoid(logits[:, 1])
+                loss = outputs[0]
+                logits = outputs[1]
 
-                # # Thresholding to convert probabilities to binary values (0 or 1)
-                # binary_output = (sigmoid_output > 0.5)
-                
-                # # Convert labels to one-hot encoding
-                b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
-
-                # Calculate the loss using the weighted loss function
-                loss = loss_function(logits, b_labels_one_hot)
                 total_train_loss += loss.item()
 
                 # Backward pass
@@ -171,6 +154,8 @@ class RobertaModel:
 
                 # Update the model parameters
                 optimizer.step()
+
+                # Update the learning rate
                 scheduler.step()
 
                 if step % 100 == 0 and step != 0:
@@ -194,19 +179,9 @@ class RobertaModel:
 
                 with torch.no_grad():
                     outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-                    # loss = outputs[0]
-                    logits = outputs.logits
+                    loss = outputs[0]
+                    logits = outputs[1]
                 
-                # sigmoid_output = torch.sigmoid(logits[:, 1])
-
-                # # Thresholding to convert probabilities to binary values (0 or 1)
-                # binary_output = (sigmoid_output > 0.5)
-                
-                # # Convert labels to one-hot encoding
-                b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
-
-                # Calculate the loss using the weighted loss function
-                loss = loss_function(logits, b_labels_one_hot)
                 total_eval_loss += loss.item()
                 logits = logits.detach().cpu().numpy()
                 label_ids = b_labels.detach().cpu().numpy()
@@ -286,16 +261,15 @@ class RobertaModel:
 
             with torch.no_grad():
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask)
-                logits = outputs.logits
+                loss = outputs[0]
+                logits = outputs[1]
 
-            logits = logits.detach().cpu().numpy()
+            _, prediction= torch.max(logits, dim=1)
 
-            # Apply a threshold (e.g., 0.5) to convert logits to class predictions
-            class_predictions = np.argmax(logits, axis=1)
-            predictions.extend(class_predictions.tolist())
+            predictions.extend(prediction.cpu().numpy().tolist())
 
         return predictions
-
+    
     def save_model(
         self, 
         path: str
@@ -327,9 +301,9 @@ class RobertaModel:
             float: The accuracy of the model.
         """
 
-        pred_flat = np.argmax(preds, axis=1).flatten()
-        labels_flat = labels.flatten()
-        return np.sum(pred_flat == labels_flat) / len(labels_flat)
+        _, preds = torch.max(preds, dim=1)
+        
+        return torch.tensor(torch.sum(preds == labels).item() / len(preds))
 
 
 class DistilbertModel:
@@ -434,16 +408,8 @@ class DistilbertModel:
 
         # Initialize variables for early stopping
         best_validation_loss = float("inf")
-        patience = 3  # Number of epochs to wait for improvement
+        patience = 5  # Number of epochs to wait for improvement
         wait = 0
-
-        class_weights = compute_class_weight('balanced', classes=np.unique(label), y=label)
-        class_weights = torch.tensor(class_weights, dtype=torch.float32).to(self.device)
-
-        # Define the loss function with class weights
-        # loss_function = torch.nn.CrossEntropyLoss(weight=class_weights)
-        pos_weight = torch.tensor(class_weights[1], dtype=torch.float32).to(self.device)
-        loss_function = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
         for epoch in range(self.num_epochs):
             print(f'{"="*20} Epoch {epoch + 1}/{self.num_epochs} {"="*20}')
@@ -459,18 +425,8 @@ class DistilbertModel:
 
                 # Forward pass
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-                logits = outputs.logits
-                
-                # sigmoid_output = torch.sigmoid(logits[:, 1])
-
-                # # Thresholding to convert probabilities to binary values (0 or 1)
-                # binary_output = (sigmoid_output > 0.5)
-                
-                # # Convert labels to one-hot encoding
-                b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
-
-                # Calculate the loss using the weighted loss function
-                loss = loss_function(logits, b_labels_one_hot)
+                loss = outputs[0]
+                logits = outputs[1]
 
                 total_train_loss += loss.item()
 
@@ -479,6 +435,8 @@ class DistilbertModel:
 
                 # Update the model parameters
                 optimizer.step()
+
+                # Update the learning rate
                 scheduler.step()
 
                 if step % 100 == 0 and step != 0:
@@ -502,18 +460,9 @@ class DistilbertModel:
 
                 with torch.no_grad():
                     outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-                    logits = outputs.logits
+                    loss = outputs[0]
+                    logits = outputs[1]
                 
-                # sigmoid_output = torch.sigmoid(logits[:, 1])
-
-                # # Thresholding to convert probabilities to binary values (0 or 1)
-                # binary_output = (sigmoid_output > 0.5)
-                
-                # # Convert labels to one-hot encoding
-                b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
-
-                # Calculate the loss using the weighted loss function
-                loss = loss_function(logits, b_labels_one_hot)
                 total_eval_loss += loss.item()
                 logits = logits.detach().cpu().numpy()
                 label_ids = b_labels.detach().cpu().numpy()
@@ -593,16 +542,15 @@ class DistilbertModel:
 
             with torch.no_grad():
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask)
-                logits = outputs.logits
+                loss = outputs[0]
+                logits = outputs[1]
 
-            logits = logits.detach().cpu().numpy()
+            _, prediction= torch.max(logits, dim=1)
 
-            # Apply a threshold (e.g., 0.5) to convert logits to class predictions
-            class_predictions = np.argmax(logits, axis=1)
-            predictions.extend(class_predictions.tolist())
+            predictions.extend(prediction.cpu().numpy().tolist())
 
         return predictions
-
+    
     def save_model(
         self, 
         path: str
@@ -634,9 +582,9 @@ class DistilbertModel:
             float: The accuracy of the model.
         """
 
-        pred_flat = np.argmax(preds, axis=1).flatten()
-        labels_flat = labels.flatten()
-        return np.sum(pred_flat == labels_flat) / len(labels_flat)
+        _, preds = torch.max(preds, dim=1)
+        
+        return torch.tensor(torch.sum(preds == labels).item() / len(preds))
 
 
 class SVMModel:
