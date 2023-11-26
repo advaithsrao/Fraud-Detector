@@ -127,7 +127,7 @@ class RobertaModel:
 
         # Initialize variables for early stopping
         best_validation_loss = float("inf")
-        patience = 10  # Number of epochs to wait for improvement
+        patience = 3  # Number of epochs to wait for improvement
         wait = 0
 
         class_weights = compute_class_weight('balanced', classes=np.unique(label), y=label)
@@ -157,13 +157,13 @@ class RobertaModel:
                 sigmoid_output = torch.sigmoid(logits[:, 1])
 
                 # Thresholding to convert probabilities to binary values (0 or 1)
-                binary_output = (sigmoid_output > 0.5).to(torch.int)
+                binary_output = (sigmoid_output > 0.5)
                 
                 # # Convert labels to one-hot encoding
                 # b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
 
                 # Calculate the loss using the weighted loss function
-                loss = loss_function(binary_output, b_labels)
+                loss = loss_function(binary_output, b_labels.float())
                 total_train_loss += loss.item()
 
                 # Backward pass
@@ -200,13 +200,13 @@ class RobertaModel:
                 sigmoid_output = torch.sigmoid(logits[:, 1])
 
                 # Thresholding to convert probabilities to binary values (0 or 1)
-                binary_output = (sigmoid_output > 0.5).to(torch.int)
+                binary_output = (sigmoid_output > 0.5)
                 
                 # # Convert labels to one-hot encoding
                 # b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
 
                 # Calculate the loss using the weighted loss function
-                loss = loss_function(binary_output, b_labels)
+                loss = loss_function(binary_output, b_labels.float())
                 total_eval_loss += loss.item()
                 logits = logits.detach().cpu().numpy()
                 label_ids = b_labels.detach().cpu().numpy()
@@ -434,7 +434,7 @@ class DistilbertModel:
 
         # Initialize variables for early stopping
         best_validation_loss = float("inf")
-        patience = 10  # Number of epochs to wait for improvement
+        patience = 3  # Number of epochs to wait for improvement
         wait = 0
 
         class_weights = compute_class_weight('balanced', classes=np.unique(label), y=label)
@@ -464,13 +464,13 @@ class DistilbertModel:
                 sigmoid_output = torch.sigmoid(logits[:, 1])
 
                 # Thresholding to convert probabilities to binary values (0 or 1)
-                binary_output = (sigmoid_output > 0.5).to(torch.int)
+                binary_output = (sigmoid_output > 0.5)
                 
                 # # Convert labels to one-hot encoding
                 # b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
 
                 # Calculate the loss using the weighted loss function
-                loss = loss_function(binary_output, b_labels)
+                loss = loss_function(binary_output, b_labels.float())
 
                 total_train_loss += loss.item()
 
@@ -507,13 +507,13 @@ class DistilbertModel:
                 sigmoid_output = torch.sigmoid(logits[:, 1])
 
                 # Thresholding to convert probabilities to binary values (0 or 1)
-                binary_output = (sigmoid_output > 0.5).to(torch.int)
+                binary_output = (sigmoid_output > 0.5)
                 
                 # # Convert labels to one-hot encoding
                 # b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
 
                 # Calculate the loss using the weighted loss function
-                loss = loss_function(binary_output, b_labels)
+                loss = loss_function(binary_output, b_labels.float())
                 total_eval_loss += loss.item()
                 logits = logits.detach().cpu().numpy()
                 label_ids = b_labels.detach().cpu().numpy()
