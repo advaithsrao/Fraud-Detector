@@ -235,8 +235,16 @@ def dump_logs_to_wandb(hyper_params, f1_scores, save_path):
 if __name__ == '__main__':
     # Parse the arguments
     args = parse_args()
-    device = args.device
-    device = device if device != 'gpu' else 'cuda'
+    
+    args.device = args.device if args.device != 'gpu' else 'cuda'
+    
+    if type(args.use_aug) == str:
+        if args.use_aug.lower() == 'true':
+            args.use_aug = True
+        elif args.use_aug.lower() == 'false':
+            args.use_aug = False
+        else:
+            raise ValueError("Invalid value for use_aug. Please enter True or False.")
     
     # Define model hyperparameters
     hyper_params = {
