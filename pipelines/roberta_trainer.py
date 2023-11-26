@@ -134,7 +134,7 @@ def train_model(train_data, hyper_params):
         train_data['Body'].tolist(), 
         train_data['Label'].tolist(), 
         aug_label=1, 
-        num_aug_per_label_1=20,
+        num_aug_per_label_1=9,
         shuffle=True
     )
 

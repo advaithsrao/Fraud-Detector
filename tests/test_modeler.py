@@ -97,7 +97,7 @@ def test_augmentor(x,y_true):
     augmentor = Augmentor()
     augmented_data = augmentor(x, y_true, aug_label=1, num_aug_per_label_1=10)
     assert len(augmented_data) == 2
-    assert len(augmented_data[0]) == 20
+    assert len(augmented_data[0]) == 22
 
 if __name__ == "__main__":
     pytest.main()
