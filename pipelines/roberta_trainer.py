@@ -1,4 +1,4 @@
-#usage: python3 -m pipelines.roberta_trainer --num_epochs 20 --batch_size 8 --num_labels 2 --device 'cuda' --save_path '/tmp' --model_name 'roberta-base'
+#usage: python3 -m pipelines.roberta_trainer --num_epochs 20 --batch_size 8 --num_labels 2 --device 'cuda' --save_path '/tmp' --model_name 'roberta-base' --use_aug True
 import sys
 sys.path.append('..')
 
@@ -35,6 +35,7 @@ def parse_args():
     parser.add_argument("--num_epochs", "-e", type=int, default=40, help="Number of epochs")
     parser.add_argument("--batch_size", "-b", type=int, default=128, help="Batch size")
     parser.add_argument("--device", "-d", type=str, default='cpu', help="Device to train the model on: 'cpu', 'cuda' or 'gpu'")
+    parser.add_argument("--use_aug", "-u", type=bool, default=False, help="Whether to use data augmentation or not for training data balancing")
     return parser.parse_args()
 
 def load_data():
@@ -128,30 +129,31 @@ def train_model(train_data, hyper_params):
     run = wandb.init(config=hyper_params)
     model = RobertaModel(**hyper_params)
 
-    augmentor = Augmentor()
+    if hyper_params['use_aug']:
+        augmentor = Augmentor()
 
-    train_body, train_labels = augmentor(
-        train_data['Body'].tolist(), 
-        train_data['Label'].tolist(), 
-        aug_label=1, 
-        num_aug_per_label_1=9,
-        shuffle=True
-    )
+        train_body, train_labels = augmentor(
+            train_data['Body'].tolist(), 
+            train_data['Label'].tolist(), 
+            aug_label=1, 
+            num_aug_per_label_1=9,
+            shuffle=True
+        )
 
-    _train_data = pd.DataFrame(
-        {
-            'Body': train_body,
-            'Label': train_labels
-        }
-    )
+        train_data = pd.DataFrame(
+            {
+                'Body': train_body,
+                'Label': train_labels
+            }
+        )
 
-    _train_data.drop_duplicates(subset=['Body'], inplace=True)
-    _train_data.reset_index(drop=True, inplace=True)
+    train_data.drop_duplicates(subset=['Body'], inplace=True)
+    train_data.reset_index(drop=True, inplace=True)
 
     # Call your code that produces output
     model.train(
-        body=_train_data['Body'], 
-        label=_train_data['Label'], 
+        body=train_data['Body'], 
+        label=train_data['Label'], 
         validation_size=0.2, 
         wandb=run
     )
@@ -242,6 +244,7 @@ if __name__ == '__main__':
         'num_epochs': args.num_epochs,
         'batch_size': args.batch_size,
         'device': args.device,
+        'use_aug': args.use_aug,
     }
 
     # Log in to Weights and Biases

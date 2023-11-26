@@ -1,4 +1,4 @@
-#usage: python3 -m pipelines.svm_trainer --num_labels 2 --C 10 --kernel 'rbf' --save_path '/tmp/model'
+#usage: python3 -m pipelines.svm_trainer --num_labels 2 --C 10 --kernel 'rbf' --save_path '/tmp/model' --use_aug True
 import sys
 sys.path.append('..')
 
@@ -14,7 +14,7 @@ from detector.data_loader import LoadEnronData, LoadPhishingData, LoadSocEnggDat
 from detector.labeler import EnronLabeler, MismatchLabeler
 from detector.modeler import SVMModel
 from detector.preprocessor import Preprocessor
-from utils.util_modeler import evaluate_and_log, get_f1_score
+from utils.util_modeler import evaluate_and_log, get_f1_score, Augmentor
 
 import wandb
 import argparse
@@ -33,6 +33,7 @@ def parse_args():
     parser.add_argument("--num_labels", "-l", type=int, default=2, help="Number of labels")
     parser.add_argument("--C", "-C", type=int, default=1, help="Regularization parameter")
     parser.add_argument("--kernel", "-k", type=str, default='rbf', help="Kernel to use in the algorithm ('linear', 'poly', 'rbf', 'sigmoid', 'precomputed')")
+    parser.add_argument("--use_aug", "-u", type=bool, default=False, help="Whether to use data augmentation or not for training data balancing")
     return parser.parse_args()
 
 def load_data():
@@ -130,6 +131,27 @@ def train_model(train_data, hyper_params):
     # train_data = train_data[~((train_data['Label'] == 1) & (train_data['Body'].str.split().str.len() < 4))]
     # train_data = train_data.reset_index(drop=True)
 
+    if hyper_params['use_aug']:
+        augmentor = Augmentor()
+
+        train_body, train_labels = augmentor(
+            train_data['Body'].tolist(), 
+            train_data['Label'].tolist(), 
+            aug_label=1, 
+            num_aug_per_label_1=9,
+            shuffle=True
+        )
+
+        train_data = pd.DataFrame(
+            {
+                'Body': train_body,
+                'Label': train_labels
+            }
+        )
+
+    train_data.drop_duplicates(subset=['Body'], inplace=True)
+    train_data.reset_index(drop=True, inplace=True)
+    
     # Call your code that produces output
     model.train(body=train_data['Body'], label=train_data['Label'])
     return model
@@ -209,7 +231,8 @@ if __name__ == '__main__':
     hyper_params = {
         'num_labels': args.num_labels,
         'C': args.C,
-        'kernel': args.kernel
+        'kernel': args.kernel,
+        'use_aug': args.use_aug,
     }
 
     # Log in to Weights and Biases
