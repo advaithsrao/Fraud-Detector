@@ -1,4 +1,4 @@
-#usage: python3 -m pipelines.distilbert_trainer --num_epochs 20 --batch_size 8 --num_labels 2 --device 'cuda' --save_path '/tmp' --model_name 'distilbert-base-uncased' --use_aug True
+#usage: python3 -m pipelines.distilbert_trainer --num_epochs 20 --batch_size 8 --num_labels 2 --device 'cuda' --save_path '/tmp' --model_name 'distilbert-base-uncased' --use_aug 'True'
 import sys
 sys.path.append('..')
 
@@ -125,7 +125,7 @@ def data_split(data):
     
     return train, sanity, gold_fraud
 
-def train_model(train_data, hyper_params):
+def train_model(train_data, hyper_params, use_aug=False):
     run = wandb.init(config=hyper_params)
     model = DistilbertModel(**hyper_params)
 
@@ -133,7 +133,7 @@ def train_model(train_data, hyper_params):
     # train_data = train_data[~((train_data['Label'] == 1) & (train_data['Body'].str.split().str.len() < 4))]
     # train_data = train_data.reset_index(drop=True)
 
-    if hyper_params['use_aug']:
+    if use_aug:
         augmentor = Augmentor()
 
         train_body, train_labels = augmentor(
@@ -256,7 +256,6 @@ if __name__ == '__main__':
         'num_epochs': args.num_epochs,
         'batch_size': args.batch_size,
         'device': args.device,
-        'use_aug': args.use_aug,
     }
 
     # Log in to Weights and Biases
@@ -289,7 +288,7 @@ if __name__ == '__main__':
     train_data, sanity_data, gold_fraud_data = data_split(data)
 
     # Train the model
-    model = train_model(train_data, hyper_params)
+    model = train_model(train_data, hyper_params, use_aug=args.use_aug)
 
     # Test the model
     f1_scores = test_model(train_data, sanity_data, gold_fraud_data, save_path)
