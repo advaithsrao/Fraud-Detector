@@ -187,7 +187,7 @@ class RobertaModel:
                 # logits = logits.detach().cpu().numpy()
                 # label_ids = b_labels.detach().cpu().numpy()
 
-                total_eval_accuracy += self.accuracy(logits, label_ids)
+                total_eval_accuracy += self.accuracy(logits, b_labels)
 
             avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
             print(f'Validation Accuracy: {avg_val_accuracy:.4f}')
@@ -475,7 +475,7 @@ class DistilbertModel:
                 # logits = logits.detach().cpu().numpy()
                 # label_ids = b_labels.detach().cpu().numpy()
 
-                total_eval_accuracy += self.accuracy(logits, label_ids)
+                total_eval_accuracy += self.accuracy(logits, b_labels)
 
             avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
             print(f'Validation Accuracy: {avg_val_accuracy:.4f}')
