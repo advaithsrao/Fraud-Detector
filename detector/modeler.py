@@ -154,11 +154,16 @@ class RobertaModel:
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
                 logits = outputs.logits
 
-                # Convert labels to one-hot encoding
-                b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
+                sigmoid_output = torch.sigmoid(logits[:, 1])
+
+                # Thresholding to convert probabilities to binary values (0 or 1)
+                binary_output = (sigmoid_output > 0.5).to(torch.int)
+                
+                # # Convert labels to one-hot encoding
+                # b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
 
                 # Calculate the loss using the weighted loss function
-                loss = loss_function(logits, b_labels_one_hot)
+                loss = loss_function(binary_output, b_labels)
                 total_train_loss += loss.item()
 
                 # Backward pass
@@ -192,11 +197,16 @@ class RobertaModel:
                     # loss = outputs[0]
                     logits = outputs.logits
                 
-                # Convert labels to one-hot encoding
-                b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
+                sigmoid_output = torch.sigmoid(logits[:, 1])
+
+                # Thresholding to convert probabilities to binary values (0 or 1)
+                binary_output = (sigmoid_output > 0.5).to(torch.int)
+                
+                # # Convert labels to one-hot encoding
+                # b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
 
                 # Calculate the loss using the weighted loss function
-                loss = loss_function(logits, b_labels_one_hot)
+                loss = loss_function(binary_output, b_labels)
                 total_eval_loss += loss.item()
                 logits = logits.detach().cpu().numpy()
                 label_ids = b_labels.detach().cpu().numpy()
@@ -451,11 +461,17 @@ class DistilbertModel:
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
                 logits = outputs.logits
 
-                # Convert labels to one-hot encoding
-                b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
+                sigmoid_output = torch.sigmoid(logits[:, 1])
+
+                # Thresholding to convert probabilities to binary values (0 or 1)
+                binary_output = (sigmoid_output > 0.5).to(torch.int)
+                
+                # # Convert labels to one-hot encoding
+                # b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
 
                 # Calculate the loss using the weighted loss function
-                loss = loss_function(logits, b_labels_one_hot)
+                loss = loss_function(binary_output, b_labels)
+
                 total_train_loss += loss.item()
 
                 # Backward pass
@@ -488,11 +504,16 @@ class DistilbertModel:
                     outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
                     logits = outputs.logits
                 
-                # Convert labels to one-hot encoding
-                b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
+                sigmoid_output = torch.sigmoid(logits[:, 1])
+
+                # Thresholding to convert probabilities to binary values (0 or 1)
+                binary_output = (sigmoid_output > 0.5).to(torch.int)
+                
+                # # Convert labels to one-hot encoding
+                # b_labels_one_hot = F.one_hot(b_labels, num_classes=2).float()
 
                 # Calculate the loss using the weighted loss function
-                loss = loss_function(logits, b_labels_one_hot)
+                loss = loss_function(binary_output, b_labels)
                 total_eval_loss += loss.item()
                 logits = logits.detach().cpu().numpy()
                 label_ids = b_labels.detach().cpu().numpy()

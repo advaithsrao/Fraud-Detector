@@ -14,7 +14,7 @@ from detector.data_loader import LoadEnronData, LoadPhishingData, LoadSocEnggDat
 from detector.labeler import EnronLabeler, MismatchLabeler
 from detector.modeler import RobertaModel
 from detector.preprocessor import Preprocessor
-from utils.util_modeler import evaluate_and_log, get_f1_score
+from utils.util_modeler import evaluate_and_log, get_f1_score, Augmentor
 
 import wandb
 import argparse
@@ -128,23 +128,33 @@ def train_model(train_data, hyper_params):
     run = wandb.init(config=hyper_params)
     model = RobertaModel(**hyper_params)
 
-    # os.makedirs(f'/tmp/{date}/logs', exist_ok=True)
+    augmentor = Augmentor()
 
-    # # Define a log file path
-    # log_filename = f"/tmp/{date}/logs/model_training.log"
+    train_body, train_labels = augmentor(
+        train_data['Body'].tolist(), 
+        train_data['Label'].tolist(), 
+        aug_label=1, 
+        num_aug_per_label_1=9,
+        shuffle=True
+    )
 
-    # # Create or open the log file in write mode
-    # log_file = open(log_filename, "w")
+    _train_data = pd.DataFrame(
+        {
+            'Body': train_body,
+            'Label': train_labels
+        }
+    )
 
-    # # Redirect stdout to the log file
-    # sys.stdout = log_file
+    _train_data.drop_duplicates(subset=['Body'], inplace=True)
+    _train_data.reset_index(drop=True, inplace=True)
 
-    # #drop train examples with Label=1 and Body less than 4 words
-    # train_data = train_data[~((train_data['Label'] == 1) & (train_data['Body'].str.split().str.len() < 4))]
-    # train_data = train_data.reset_index(drop=True)
-    
     # Call your code that produces output
-    model.train(body=train_data['Body'], label=train_data['Label'], validation_size=0.2, wandb=run)
+    model.train(
+        body=_train_data['Body'], 
+        label=_train_data['Label'], 
+        validation_size=0.2, 
+        wandb=run
+    )
 
     # Restore the original stdout
     # sys.stdout = sys.__stdout__

@@ -10,7 +10,7 @@ import pandas as pd
 from numpy import array
 import pytest
 
-from utils.util_modeler import evaluate_and_log, get_f1_score, get_classification_report_confusion_matrix, Word2VecEmbedder, TPSampler
+from utils.util_modeler import evaluate_and_log, get_f1_score, get_classification_report_confusion_matrix, Word2VecEmbedder, TPSampler, Augmentor
 from utils.util_data_loader import sha256_hash
 
 @pytest.fixture
@@ -92,6 +92,12 @@ def test_word2vec_embedding(mail):
 def test_tp_sampler():
     sampler = TPSampler(class_labels=[0,1,0,1,0,1])
     assert sampler.__len__() == 3
+
+def test_augmentor(x,y_true):
+    augmentor = Augmentor()
+    augmented_data = augmentor(x, y_true, aug_label=1, num_aug_per_label_1=10)
+    assert len(augmented_data) == 2
+    assert len(augmented_data[0]) == 22
 
 if __name__ == "__main__":
     pytest.main()
