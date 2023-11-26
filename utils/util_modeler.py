@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
 import numpy as np
 import gensim.downloader
@@ -10,6 +11,10 @@ import wandb
 # from torch.utils.data import Sampler
 from sklearn.utils.class_weight import compute_sample_weight
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils import shuffle as shuffler
+import random
+
+import nlpaug.augmenter.word as naw
 
 nltk.download('stopwords')
 
@@ -224,3 +229,93 @@ class TPSampler:
         """
         
         return len(self.tp_indices)  # This defines the total number of samples for the dataloader
+
+
+class Augmentor:
+    def __init__(
+        self, 
+        augmentor = None
+    ):
+        """A custom augmentor to augment the training data.
+        
+        Args:
+            augmentor (albumentations.core.composition.Compose): The augmentor to use.
+        """
+
+        if augmentor is None:
+            augmentor = naw.SynonymAug()
+
+    def __call__(
+        self, 
+        X, 
+        y,
+        aug_label = 1,
+        num_aug_per_label_1 = 10,
+        shuffle=True
+    ):
+        """Augment the training data.
+
+        Args:
+            X (list): The input data.
+            y (list): The labels.
+            aug_label (int, optional): The label to augment. Defaults to 1.
+            num_aug_per_label_1 (int, optional): The number of augmentations to apply to the label. Defaults to 10.
+            shuffle (bool, optional): Whether to shuffle the data. Defaults to True.
+
+        Returns:
+            tuple: The augmented data and labels.
+        """
+
+        if isinstance(X, str):
+            X = [X]
+        elif isinstance(X, pd.Series):
+            X = X.tolist()
+        
+        if isinstance(y, str):
+            y = [y]
+        elif isinstance(y, pd.Series):
+            y = y.tolist()
+        
+        X, y = self.augment_data(X, y, aug_label, num_aug_per_label_1=num_aug_per_label_1)
+
+        if shuffle:
+            X, y = shuffler(X, y, random_state=42)
+        
+        return X, y
+    
+    def augment_data(
+        self, 
+        input_text, 
+        input_labels, 
+        aug_label=1, 
+        num_aug_per_label_1=10
+    ):
+        
+        augmented_texts = []
+        augmented_labels = []
+
+        for text, lbl in zip(input_text, input_labels):
+            augmented_texts.append(text)
+            augmented_labels.append(lbl)
+
+            # Apply augmentation only to instances with label 1
+            if float(lbl) == float(aug_label):
+                for _ in range(num_aug_per_label_1):
+                    augmented_text = self.apply_augmentation(text)
+                    augmented_texts.append(augmented_text)
+                    augmented_labels.append(lbl)
+
+        return augmented_texts, augmented_labels
+
+    def apply_augmentation(
+        self,
+        text
+    ):
+        
+        # Choose an augmentation technique (you can explore different techniques)
+        aug = naw.SynonymAug()
+
+        # Augment the text
+        augmented_text = aug.augment(text)[0]
+
+        return augmented_text
