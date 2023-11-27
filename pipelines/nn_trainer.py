@@ -12,7 +12,7 @@ import os
 
 from detector.data_loader import LoadEnronData, LoadPhishingData, LoadSocEnggData
 from detector.labeler import EnronLabeler, MismatchLabeler
-from detector.modeler import RobertaModel
+from detector.modeler import NNModel
 from detector.preprocessor import Preprocessor
 from utils.util_modeler import evaluate_and_log, get_f1_score, Augmentor
 
@@ -28,7 +28,7 @@ config.read(
 )
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Roberta Model Fraud Detector Pipeline")
+    parser = argparse.ArgumentParser(description="NN Model Fraud Detector Pipeline")
     parser.add_argument("--save_path", "-s", type=str, default='/tmp/', help="Output save path")
     parser.add_argument("--num_labels", "-l", type=int, default=2, help="Number of labels")
     parser.add_argument("--model_name", "-m", type=str, default='roberta-base', help="Model Name")
@@ -128,7 +128,7 @@ def data_split(data):
 
 def train_model(train_data, hyper_params, use_aug=False):
     run = wandb.init(config=hyper_params)
-    model = RobertaModel(**hyper_params)
+    model = NNModel(**hyper_params)
 
     if use_aug:
         augmentor = Augmentor()

@@ -34,6 +34,7 @@ def parse_args():
     parser.add_argument("--model_name", "-m", type=str, default='distilbert-base-uncased', help="Model Name")
     parser.add_argument("--num_epochs", "-e", type=int, default=40, help="Number of epochs")
     parser.add_argument("--batch_size", "-b", type=int, default=128, help="Batch size")
+    parser.add_argument("--learning_rate", "-lr", type=float, default=2e-05, help="Learning rate for the model")
     parser.add_argument("--device", "-d", type=str, default='cpu', help="Device to train the model on: 'cpu', 'cuda' or 'gpu'")
     parser.add_argument("--use_aug", "-u", type=bool, default=False, help="Whether to use data augmentation or not for training data balancing")
     return parser.parse_args()
@@ -255,6 +256,7 @@ if __name__ == '__main__':
         'num_labels': args.num_labels,
         'num_epochs': args.num_epochs,
         'batch_size': args.batch_size,
+        'learning_rate': args.learning_rate,
         'device': args.device,
     }
 
