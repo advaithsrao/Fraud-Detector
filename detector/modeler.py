@@ -376,6 +376,8 @@ class RobertaModel:
             nn.ReLU(),
             nn.Linear(128, self.num_labels)
         )
+
+        self.classification_head.to(self.device)
         
     def train(
         self, 
@@ -688,6 +690,8 @@ class DistilbertModel:
             nn.ReLU(),
             nn.Linear(128, self.num_labels)
         )
+
+        self.classification_head.to(self.device)
         
     def train(
         self, 
