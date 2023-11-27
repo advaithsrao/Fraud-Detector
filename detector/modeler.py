@@ -69,6 +69,8 @@ class NNModel:
             nn.ReLU(),
             nn.Linear(8, 2),
         )
+
+        self.model.to(device)
         
     def train(
         self, 
