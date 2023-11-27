@@ -367,9 +367,15 @@ class RobertaModel:
         self.tokenizer = RobertaTokenizer.from_pretrained(self.model_name)
 
         if self.path != '':
-            self.model = RobertaModel.from_pretrained(self.path, num_labels=self.num_labels).to(self.device)
+            self.model = RobertaModel.from_pretrained(self.path).to(self.device)
         else:
-            self.model = RobertaModel.from_pretrained(self.model_name, num_labels=self.num_labels).to(self.device)
+            self.model = RobertaModel.from_pretrained(self.model_name).to(self.device)
+        
+        self.classification_head = nn.Sequential(
+            nn.Linear(self.model.config.hidden_size, 128),
+            nn.ReLU(),
+            nn.Linear(128, self.num_labels)
+        )
         
     def train(
         self, 
@@ -433,7 +439,8 @@ class RobertaModel:
         validation_dataloader = DataLoader(val_dataset, batch_size=self.batch_size)
 
         # Initialize the optimizer and learning rate scheduler
-        optimizer = AdamW(self.model.parameters(), lr=self.learning_rate, eps=self.epsilon)
+        optimizer = AdamW(list(self.model.parameters()) + list(self.classification_head.parameters()),
+                          lr=self.learning_rate, eps=self.epsilon)
         total_steps = len(train_dataloader) * self.num_epochs
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
 
@@ -447,6 +454,7 @@ class RobertaModel:
 
             # Training loop
             self.model.train()
+            self.classification_head.train()
             total_train_loss = 0
 
             for step, batch in enumerate(train_dataloader):
@@ -455,14 +463,20 @@ class RobertaModel:
                 b_labels = batch[2].to(self.device)
 
                 # Forward pass
-                outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-                loss = outputs[0]
-                logits = F.softmax(outputs[1], dim=1)   # Taking the softmax of output
+                outputs = self.model(b_input_ids, attention_mask=b_input_mask)
+                last_hidden_states = outputs.last_hidden_state
+
+                # Apply classification head
+                logits = self.classification_head(last_hidden_states[:, 0, :])
+
+                loss = F.cross_entropy(logits, b_labels)
 
                 total_train_loss += loss.item()
 
                 # Backward pass
                 loss.backward()
+
+                torch.nn.utils.clip_grad_norm_(list(self.model.parameters()) + list(self.classification_head.parameters()), 1.0)
 
                 # Update the model parameters
                 optimizer.step()
@@ -481,6 +495,7 @@ class RobertaModel:
 
             # Evaluation loop
             self.model.eval()
+            self.classification_head.eval()
             total_eval_accuracy = 0
             total_eval_loss = 0
 
@@ -490,14 +505,16 @@ class RobertaModel:
                 b_labels = batch[2].to(self.device)
 
                 with torch.no_grad():
-                    outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-                    loss = outputs[0]
-                    logits = F.softmax(outputs[1], dim=1)   # Taking the softmax of output
-                
-                total_eval_loss += loss.item()
-                
-                # logits = logits.detach().cpu().numpy()
-                # label_ids = b_labels.detach().cpu().numpy()
+                    outputs = self.model(b_input_ids, attention_mask=b_input_mask)
+                    last_hidden_states = outputs.last_hidden_state
+
+                    # Apply classification head
+                    logits = self.classification_head(last_hidden_states[:, 0, :])
+
+                    loss = F.cross_entropy(logits, b_labels)
+
+                    total_eval_loss += loss.item()
+                    total_eval_accuracy += self.accuracy(logits, b_labels)
 
                 total_eval_accuracy += self.accuracy(logits, b_labels)
 
@@ -575,9 +592,10 @@ class RobertaModel:
 
             with torch.no_grad():
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask)
-                # loss = outputs[0]
-                # logits = F.softmax(outputs[1])   # Taking the softmax of output
-                logits = outputs.logits
+                last_hidden_states = outputs.last_hidden_state
+
+                # Apply classification head
+                logits = self.classification_head(last_hidden_states[:, 0, :])
 
             logits = logits.detach().cpu().numpy()
 
@@ -589,8 +607,8 @@ class RobertaModel:
         return predictions
     
     def save_model(
-        self, 
-        path: str
+            self,
+            path: str
     ):
         """Saves the model to the given path.
 
@@ -601,8 +619,10 @@ class RobertaModel:
         # Check if the directory exists, and if not, create it
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
-        
+
+        # Save the transformer model and the classification head
         self.model.save_pretrained(path)
+        torch.save(self.classification_head.state_dict(), os.path.join(path, 'classification_head.pth'))
     
     def accuracy(
         self, 
@@ -662,6 +682,12 @@ class DistilbertModel:
             self.model = DistilBertModel.from_pretrained(self.path).to(self.device)
         else:
             self.model = DistilBertModel.from_pretrained(self.model_name).to(self.device)
+
+        self.classification_head = nn.Sequential(
+            nn.Linear(self.model.config.hidden_size, 128),
+            nn.ReLU(),
+            nn.Linear(128, self.num_labels)
+        )
         
     def train(
         self, 
@@ -725,7 +751,8 @@ class DistilbertModel:
         validation_dataloader = DataLoader(val_dataset, batch_size=self.batch_size)
 
         # Initialize the optimizer and learning rate scheduler
-        optimizer = AdamW(self.model.parameters(), lr=self.learning_rate, eps=self.epsilon)
+        optimizer = AdamW(list(self.model.parameters()) + list(self.classification_head.parameters()),
+                          lr=self.learning_rate, eps=self.epsilon)
         total_steps = len(train_dataloader) * self.num_epochs
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
 
@@ -739,6 +766,7 @@ class DistilbertModel:
 
             # Training loop
             self.model.train()
+            self.classification_head.train()
             total_train_loss = 0
 
             for step, batch in enumerate(train_dataloader):
@@ -747,14 +775,20 @@ class DistilbertModel:
                 b_labels = batch[2].to(self.device)
 
                 # Forward pass
-                outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-                loss = outputs[0]
-                logits = F.softmax(outputs[1], dim=1)   # Taking the softmax of output
+                outputs = self.model(b_input_ids, attention_mask=b_input_mask)
+                last_hidden_states = outputs.last_hidden_state
+
+                # Apply classification head
+                logits = self.classification_head(last_hidden_states[:, 0, :])
+
+                loss = F.cross_entropy(logits, b_labels)
 
                 total_train_loss += loss.item()
 
                 # Backward pass
                 loss.backward()
+
+                torch.nn.utils.clip_grad_norm_(list(self.model.parameters()) + list(self.classification_head.parameters()), 1.0)
 
                 # Update the model parameters
                 optimizer.step()
@@ -773,6 +807,7 @@ class DistilbertModel:
 
             # Evaluation loop
             self.model.eval()
+            self.classification_head.eval()
             total_eval_accuracy = 0
             total_eval_loss = 0
 
@@ -782,14 +817,16 @@ class DistilbertModel:
                 b_labels = batch[2].to(self.device)
 
                 with torch.no_grad():
-                    outputs = self.model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-                    loss = outputs[0]
-                    logits = F.softmax(outputs[1], dim=1)   # Taking the softmax of output
-                
-                total_eval_loss += loss.item()
-                
-                # logits = logits.detach().cpu().numpy()
-                # label_ids = b_labels.detach().cpu().numpy()
+                    outputs = self.model(b_input_ids, attention_mask=b_input_mask)
+                    last_hidden_states = outputs.last_hidden_state
+
+                    # Apply classification head
+                    logits = self.classification_head(last_hidden_states[:, 0, :])
+
+                    loss = F.cross_entropy(logits, b_labels)
+
+                    total_eval_loss += loss.item()
+                    total_eval_accuracy += self.accuracy(logits, b_labels)
 
                 total_eval_accuracy += self.accuracy(logits, b_labels)
 
@@ -867,9 +904,10 @@ class DistilbertModel:
 
             with torch.no_grad():
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask)
-                # loss = outputs[0]
-                # logits = F.softmax(outputs[1])   # Taking the softmax of output
-                logits = outputs.logits
+                last_hidden_states = outputs.last_hidden_state
+
+                # Apply classification head
+                logits = self.classification_head(last_hidden_states[:, 0, :])
 
             logits = logits.detach().cpu().numpy()
 
@@ -881,8 +919,8 @@ class DistilbertModel:
         return predictions
     
     def save_model(
-        self, 
-        path: str
+            self,
+            path: str
     ):
         """Saves the model to the given path.
 
@@ -893,8 +931,10 @@ class DistilbertModel:
         # Check if the directory exists, and if not, create it
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
-        
+
+        # Save the transformer model and the classification head
         self.model.save_pretrained(path)
+        torch.save(self.classification_head.state_dict(), os.path.join(path, 'classification_head.pth'))
     
     def accuracy(
         self, 
