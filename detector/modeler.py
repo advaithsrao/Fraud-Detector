@@ -13,8 +13,9 @@ from sklearn.pipeline import Pipeline
 import torch
 from torch import nn
 
-from transformers import RobertaTokenizer, RobertaForSequenceClassification
-from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
+from transformers import RobertaTokenizer, RobertaForSequenceClassification, RobertaModel
+from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, DistilBertModel
+from transformers import BertModel
 from transformers import AdamW, get_linear_schedule_with_warmup
 
 from torch.utils.data import DataLoader, TensorDataset#, SubsetRandomSampler
@@ -151,9 +152,9 @@ class NNModel:
             total_train_loss = 0
 
             for step, batch in enumerate(train_dataloader):
-                b_input_ids = batch[0].to(self.device)
+                b_input_ids = batch[0].to(self.device, dtype=torch.float)
                 b_input_mask = batch[1].to(self.device)
-                b_labels = batch[2].to(self.device)
+                b_labels = batch[2].to(self.device, dtype=torch.float)
 
                 # Forward pass
                 outputs = self.model(b_input_ids)
@@ -161,7 +162,7 @@ class NNModel:
                 logits = F.sigmoid(outputs)   # Apply sigmoid to the final output
 
                 # Compute binary cross-entropy loss
-                loss = F.binary_cross_entropy(logits, b_labels.float())
+                loss = F.binary_cross_entropy(logits, b_labels)
 
                 total_train_loss += loss.item()
 
@@ -366,9 +367,9 @@ class RobertaModel:
         self.tokenizer = RobertaTokenizer.from_pretrained(self.model_name)
 
         if self.path != '':
-            self.model = RobertaForSequenceClassification.from_pretrained(self.path, num_labels=self.num_labels).to(self.device)
+            self.model = RobertaModel.from_pretrained(self.path, num_labels=self.num_labels).to(self.device)
         else:
-            self.model = RobertaForSequenceClassification.from_pretrained(self.model_name, num_labels=self.num_labels).to(self.device)
+            self.model = RobertaModel.from_pretrained(self.model_name, num_labels=self.num_labels).to(self.device)
         
     def train(
         self, 
@@ -658,9 +659,9 @@ class DistilbertModel:
         self.tokenizer = DistilBertTokenizer.from_pretrained(self.model_name)
 
         if self.path != '':
-            self.model = DistilBertForSequenceClassification.from_pretrained(self.path).to(self.device)
+            self.model = DistilBertModel.from_pretrained(self.path).to(self.device)
         else:
-            self.model = DistilBertForSequenceClassification.from_pretrained(self.model_name).to(self.device)
+            self.model = DistilBertModel.from_pretrained(self.model_name).to(self.device)
         
     def train(
         self, 
