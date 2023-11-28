@@ -28,7 +28,7 @@ from scipy.sparse import hstack
 from utils.util_modeler import Word2VecEmbedder, TPSampler
 
 
-class NNModel:
+class NNFraudModel:
     def __init__(
         self, 
         num_labels: int = 2,
@@ -337,7 +337,7 @@ class NNModel:
         return torch.tensor(torch.sum(preds == labels).item() / len(preds))
 
 
-class RobertaModel:
+class RobertaFraudModel:
     def __init__(
         self, 
         num_labels: int = 2,
@@ -651,7 +651,7 @@ class RobertaModel:
         return torch.tensor(torch.sum(preds == labels).item() / len(preds))
 
 
-class DistilbertModel:
+class DistilbertFraudModel:
     def __init__(
         self, 
         num_labels=2, 
@@ -965,7 +965,7 @@ class DistilbertModel:
         return torch.tensor(torch.sum(preds == labels).item() / len(preds))
 
 
-class SVMModel:
+class SVMFraudModel:
     def __init__(
         self,
         num_labels: int = 2,

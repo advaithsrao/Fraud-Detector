@@ -12,7 +12,7 @@ import os
 
 from detector.data_loader import LoadEnronData, LoadPhishingData, LoadSocEnggData
 from detector.labeler import EnronLabeler, MismatchLabeler
-from detector.modeler import RobertaModel
+from detector.modeler import RobertaFraudModel
 from detector.preprocessor import Preprocessor
 from utils.util_modeler import evaluate_and_log, get_f1_score, Augmentor
 
@@ -128,7 +128,7 @@ def data_split(data):
 
 def train_model(train_data, hyper_params, use_aug=False):
     run = wandb.init(config=hyper_params)
-    model = RobertaModel(**hyper_params)
+    model = RobertaFraudModel(**hyper_params)
 
     if use_aug:
         augmentor = Augmentor()

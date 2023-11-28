@@ -12,7 +12,7 @@ import os
 
 from detector.data_loader import LoadEnronData, LoadPhishingData, LoadSocEnggData
 from detector.labeler import EnronLabeler, MismatchLabeler
-from detector.modeler import DistilbertModel
+from detector.modeler import DistilbertFraudModel
 from detector.preprocessor import Preprocessor
 from utils.util_modeler import evaluate_and_log, get_f1_score, Augmentor
 
@@ -128,7 +128,7 @@ def data_split(data):
 
 def train_model(train_data, hyper_params, use_aug=False):
     run = wandb.init(config=hyper_params)
-    model = DistilbertModel(**hyper_params)
+    model = DistilbertFraudModel(**hyper_params)
 
     # #drop train examples with Label=1 and Body less than 4 words
     # train_data = train_data[~((train_data['Label'] == 1) & (train_data['Body'].str.split().str.len() < 4))]
