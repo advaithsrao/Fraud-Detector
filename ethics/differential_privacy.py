@@ -78,10 +78,11 @@ class DistilbertPrivacyModel:
         self.tokenizer = DistilBertTokenizer.from_pretrained(self.model_name)
 
         if self.path != '':
-            self.model = BaseModel.from_pretrained(self.model_name).to(self.device)
+            raise NotImplementedError('Loading model from path is not implemented yet.')
         else:
-            self.model = BaseModel.to(self.device)
-
+            self.model = BaseModel()
+            self.model.to(self.device)
+        
         self.privacy_engine = PrivacyEngine()
         
     def train(
