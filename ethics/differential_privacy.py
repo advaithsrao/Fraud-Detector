@@ -149,7 +149,7 @@ class DistilbertPrivacyModel:
         patience = 5  # Number of epochs to wait for improvement
         wait = 0
 
-        for epoch in range(3):
+        for epoch in range(self.num_epochs//2 + 1):
             print(f'{"="*20} Epoch {epoch + 1}/{self.num_epochs} {"="*20}')
 
             # Training loop
@@ -195,7 +195,7 @@ class DistilbertPrivacyModel:
             avg_train_loss = total_train_loss / len(train_dataloader)
             print(f'Training loss: {avg_train_loss:.4f}')
 
-        print('\n Retraining with Differential Privacy')
+        print('\n ********* Retraining with Differential Privacy *********')
 
         optimizer_model = AdamW(list(self.model.parameters()),
                         lr=self.learning_rate, eps=self.epsilon)
@@ -203,36 +203,38 @@ class DistilbertPrivacyModel:
         optimizer_classification_head = AdamW(list(self.classification_head.parameters()),
                         lr=self.learning_rate, eps=self.epsilon)
         
-        self.model, optimizer_model, train_dataloader = self.privacy_engine.make_private_with_epsilon(
-            module=self.model,
-            optimizer=optimizer_model,
-            data_loader=train_dataloader,
-            target_delta=1 / len(train_dataloader),
-            target_epsilon=self.epsilon,
-            epochs=self.num_epochs,
-            max_grad_norm=0.1,
+        privacy_engine_model = PrivacyEngine(
+            self.model,
+            batch_size=self.batch_size,
+            sample_size=len(train_dataset),
+            alphas=[10, 100],
+            noise_multiplier=1.3,
+            max_grad_norm=1.0,
         )
+        
+        privacy_engine_model.attach(optimizer_model)
 
-        self.classification_head, optimizer_classification_head, train_dataloader = self.privacy_engine.make_private_with_epsilon(
-            module=self.classification_head,
-            optimizer=optimizer_classification_head,
-            data_loader=train_dataloader,
-            target_delta=1 / len(train_dataloader),
-            target_epsilon=self.epsilon,
-            epochs=self.num_epochs,
-            max_grad_norm=0.1,
+        privacy_engine_cls_head = PrivacyEngine(
+            self.classification_head,
+            batch_size=self.batch_size,
+            sample_size=len(train_dataset),
+            alphas=[10, 100],
+            noise_multiplier=1.3,
+            max_grad_norm=1.0,
         )
+        
+        privacy_engine_cls_head.attach(optimizer_classification_head)
 
         total_steps = len(train_dataloader) * self.num_epochs
         scheduler_model = get_linear_schedule_with_warmup(optimizer_model, num_warmup_steps=0, num_training_steps=total_steps)
         scheduler_classification_head = get_linear_schedule_with_warmup(optimizer_classification_head, num_warmup_steps=0, num_training_steps=total_steps)
 
-        for epoch in range(self.num_epochs):
+        for epoch in range(self.num_epochs//2 - 1):
             print(f'{"="*20} Epoch {epoch + 1}/{self.num_epochs} {"="*20}')
 
             # Training loop
-            self.model.train()
-            self.classification_head.train()
+            optimizer_model.zero_grad()
+            optimizer_classification_head.zero_grad()
             total_train_loss = 0
 
             for step, batch in enumerate(train_dataloader):
@@ -272,6 +274,12 @@ class DistilbertPrivacyModel:
 
             avg_train_loss = total_train_loss / len(train_dataloader)
             print(f'Training loss: {avg_train_loss:.4f}')
+
+            epsilon, best_alpha = optimizer_model.privacy_engine.get_privacy_spent(delta=1e-5)
+            print(f"For Pretrained Distilbert Model, ε = {epsilon:.2f}, δ = 1e-5 for α = {best_alpha}")
+
+            epsilon, best_alpha = optimizer_classification_head.privacy_engine.get_privacy_spent(delta=1e-5)
+            print(f"For Classification Head, ε = {epsilon:.2f}, δ = 1e-5 for α = {best_alpha}")
 
             # Evaluation loop
             self.model.eval()
