@@ -147,22 +147,33 @@ class DistilbertPrivacyModel:
         validation_dataloader = DataLoader(val_dataset, batch_size=self.batch_size)
 
         # Initialize the Privacy engine, optimizer and learning rate scheduler
-        optimizer = torch.optim.Adam(params = self.model.parameters(), lr=self.learning_rate)
+        optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.learning_rate, eps=self.epsilon)
         
         total_steps = len(train_dataloader) * self.num_epochs
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
 
         MAX_GRAD_NORM = 0.1
 
-        self.model, optimizer, train_dataloader = self.privacy_engine.make_private_with_epsilon(
+        # self.model, optimizer, train_dataloader = self.privacy_engine.make_private_with_epsilon(
+        #     module=self.model,
+        #     optimizer=optimizer,
+        #     data_loader=train_dataloader,
+        #     target_delta=1/len(train_dataloader),
+        #     target_epsilon=self.epsilon, 
+        #     epochs=self.num_epochs,
+        #     max_grad_norm=MAX_GRAD_NORM,
+        # )
+
+        self.privacy_engine = PrivacyEngine(
             module=self.model,
-            optimizer=optimizer,
-            data_loader=train_dataloader,
-            target_delta=1/len(train_dataloader),
-            target_epsilon=self.epsilon, 
-            epochs=self.num_epochs,
+            sample_rate=self.batch_size / len(train_dataset),
+            target_delta = 1 / len(train_dataloader),
+            target_epsilon = self.epsilon, 
+            epochs = self.num_epochs,
             max_grad_norm=MAX_GRAD_NORM,
         )
+        
+        self.privacy_engine.attach(optimizer)
 
         # Initialize variables for early stopping
         best_validation_loss = float("inf")
@@ -197,10 +208,14 @@ class DistilbertPrivacyModel:
                     # Backward pass
                     loss.backward()
 
-                    # torch.nn.utils.clip_grad_norm_(list(self.model.parameters()), 1.0)
+                    torch.nn.utils.clip_grad_norm_(list(self.model.parameters()), 1.0)
 
                     # Update the model parameters
-                    optimizer.step()
+                    if (step + 1) % 1000 == 0 or step == len(train_dataloader) - 1:
+                        optimizer.step()
+                    else:
+                        optimizer.virtual_step()
+                    
 
                     # Update the learning rate
                     scheduler.step()
