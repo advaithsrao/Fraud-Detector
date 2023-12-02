@@ -26,6 +26,26 @@ from scipy.sparse import hstack
 from utils.util_modeler import Word2VecEmbedder, TPSampler
 
 from opacus import PrivacyEngine
+from opacus.utils.batch_memory_manager import BatchMemoryManager
+
+
+class BaseModel(torch.nn.Module):
+    def __init__(self):
+        super(BaseModel, self).__init__()
+        self.l1 = DistilBertModel.from_pretrained("distilbert-base-uncased")
+        self.pre_classifier = torch.nn.Linear(768, 768)
+        self.dropout = torch.nn.Dropout(0.3)
+        self.classifier = torch.nn.Linear(768, 4)
+
+    def forward(self, input_ids, attention_mask):
+        output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask)
+        hidden_state = output_1[0]
+        pooler = hidden_state[:, 0]
+        pooler = self.pre_classifier(pooler)
+        pooler = torch.nn.ReLU()(pooler)
+        pooler = self.dropout(pooler)
+        output = self.classifier(pooler)
+        return output
 
 
 class DistilbertPrivacyModel:
@@ -58,17 +78,9 @@ class DistilbertPrivacyModel:
         self.tokenizer = DistilBertTokenizer.from_pretrained(self.model_name)
 
         if self.path != '':
-            self.model = DistilBertModel.from_pretrained(self.path).to(self.device)
+            self.model = BaseModel.to(self.device)
         else:
-            self.model = DistilBertModel.from_pretrained(self.model_name).to(self.device)
-
-        self.classification_head = nn.Sequential(
-            nn.Linear(self.model.config.hidden_size, 128),
-            nn.ReLU(),
-            nn.Linear(128, self.num_labels)
-        )
-
-        self.classification_head.to(self.device)
+            self.model = BaseModel.from_pretrained(self.model_name).to(self.device)
 
         self.privacy_engine = PrivacyEngine()
         
@@ -134,156 +146,79 @@ class DistilbertPrivacyModel:
         validation_dataloader = DataLoader(val_dataset, batch_size=self.batch_size)
 
         # Initialize the Privacy engine, optimizer and learning rate scheduler
-        optimizer_model = AdamW(list(self.model.parameters()),
-                          lr=self.learning_rate, eps=self.epsilon)
-        
-        optimizer_classification_head = AdamW(list(self.classification_head.parameters()),
+        optimizer = AdamW(list(self.model.parameters()),
                           lr=self.learning_rate, eps=self.epsilon)
         
         total_steps = len(train_dataloader) * self.num_epochs
-        scheduler_model = get_linear_schedule_with_warmup(optimizer_model, num_warmup_steps=0, num_training_steps=total_steps)
-        scheduler_classification_head = get_linear_schedule_with_warmup(optimizer_classification_head, num_warmup_steps=0, num_training_steps=total_steps)
+        scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
+
+        MAX_GRAD_NORM = 0.1
+
+        self.model, optimizer, train_dataloader = self.privacy_engine.make_private_with_epsilon(
+            module=self.model,
+            optimizer=optimizer,
+            data_loader=train_dataloader,
+            target_delta=1/len(train_dataloader),
+            target_epsilon=self.epsilon, 
+            epochs=self.num_epochs,
+            max_grad_norm=MAX_GRAD_NORM,
+        )
 
         # Initialize variables for early stopping
         best_validation_loss = float("inf")
         patience = 5  # Number of epochs to wait for improvement
         wait = 0
 
-        for epoch in range(self.num_epochs//2 + 1):
+        for epoch in range(self.num_epochs):
             print(f'{"="*20} Epoch {epoch + 1}/{self.num_epochs} {"="*20}')
 
             # Training loop
             self.model.train()
-            self.classification_head.train()
             total_train_loss = 0
 
-            for step, batch in enumerate(train_dataloader):
-                b_input_ids = batch[0].to(self.device)
-                b_input_mask = batch[1].to(self.device)
-                b_labels = batch[2].to(self.device)
+            with BatchMemoryManager(
+                data_loader=train_dataloader, 
+                max_physical_batch_size=self.batch_size, 
+                optimizer=optimizer
+            ) as memory_safe_data_loader:
+                for step, batch in enumerate(memory_safe_data_loader):
+                    optimizer.zero_grad()
+                    b_input_ids = batch[0].to(self.device, dtype=torch.long)
+                    b_input_mask = batch[1].to(self.device, dtype=torch.long)
+                    b_labels = batch[2].to(self.device, dtype=torch.long)
 
-                # Forward pass
-                outputs = self.model(b_input_ids, attention_mask=b_input_mask)
-                last_hidden_states = outputs.last_hidden_state
+                    # Forward pass
+                    outputs = self.model(b_input_ids, attention_mask=b_input_mask)
 
-                # Apply classification head
-                logits = self.classification_head(last_hidden_states[:, 0, :])
+                    loss = F.cross_entropy(outputs, b_labels)
 
-                loss = F.cross_entropy(logits, b_labels)
+                    total_train_loss += loss.item()
 
-                total_train_loss += loss.item()
+                    # Backward pass
+                    loss.backward()
 
-                # Backward pass
-                loss.backward()
+                    torch.nn.utils.clip_grad_norm_(list(self.model.parameters()), 1.0)
 
-                torch.nn.utils.clip_grad_norm_(list(self.model.parameters()) + list(self.classification_head.parameters()), 1.0)
+                    # Update the model parameters
+                    optimizer.step()
 
-                # Update the model parameters
-                optimizer_model.step()
-                optimizer_classification_head.step()
+                    # Update the learning rate
+                    scheduler.step()
 
-                # Update the learning rate
-                scheduler_model.step()
-                scheduler_classification_head.step()
+                    if step % 100 == 0 and step != 0:
+                        avg_train_loss = total_train_loss / 100
+                        print(f'Step {step}/{len(train_dataloader)} - Average training loss: {avg_train_loss:.4f}')
 
-                if step % 100 == 0 and step != 0:
-                    avg_train_loss = total_train_loss / 100
-                    print(f'Step {step}/{len(train_dataloader)} - Average training loss: {avg_train_loss:.4f}')
-
-                    total_train_loss = 0
+                        total_train_loss = 0
 
             avg_train_loss = total_train_loss / len(train_dataloader)
             print(f'Training loss: {avg_train_loss:.4f}')
 
-        print('\n ********* Retraining with Differential Privacy *********')
-
-        optimizer_model = AdamW(list(self.model.parameters()),
-                        lr=self.learning_rate, eps=self.epsilon)
-        
-        optimizer_classification_head = AdamW(list(self.classification_head.parameters()),
-                        lr=self.learning_rate, eps=self.epsilon)
-        
-        privacy_engine_model = PrivacyEngine(
-            self.model,
-            batch_size=self.batch_size,
-            sample_size=len(train_dataset),
-            alphas=[10, 100],
-            noise_multiplier=1.3,
-            max_grad_norm=1.0,
-        )
-        
-        privacy_engine_model.attach(optimizer_model)
-
-        privacy_engine_cls_head = PrivacyEngine(
-            self.classification_head,
-            batch_size=self.batch_size,
-            sample_size=len(train_dataset),
-            alphas=[10, 100],
-            noise_multiplier=1.3,
-            max_grad_norm=1.0,
-        )
-        
-        privacy_engine_cls_head.attach(optimizer_classification_head)
-
-        total_steps = len(train_dataloader) * self.num_epochs
-        scheduler_model = get_linear_schedule_with_warmup(optimizer_model, num_warmup_steps=0, num_training_steps=total_steps)
-        scheduler_classification_head = get_linear_schedule_with_warmup(optimizer_classification_head, num_warmup_steps=0, num_training_steps=total_steps)
-
-        for epoch in range(self.num_epochs//2 - 1):
-            print(f'{"="*20} Epoch {epoch + 1}/{self.num_epochs} {"="*20}')
-
-            # Training loop
-            optimizer_model.zero_grad()
-            optimizer_classification_head.zero_grad()
-            total_train_loss = 0
-
-            for step, batch in enumerate(train_dataloader):
-                b_input_ids = batch[0].to(self.device)
-                b_input_mask = batch[1].to(self.device)
-                b_labels = batch[2].to(self.device)
-
-                # Forward pass
-                outputs = self.model(b_input_ids, attention_mask=b_input_mask)
-                last_hidden_states = outputs.last_hidden_state
-
-                # Apply classification head
-                logits = self.classification_head(last_hidden_states[:, 0, :])
-
-                loss = F.cross_entropy(logits, b_labels)
-
-                total_train_loss += loss.item()
-
-                # Backward pass
-                loss.backward()
-
-                torch.nn.utils.clip_grad_norm_(list(self.model.parameters()) + list(self.classification_head.parameters()), 1.0)
-
-                # Update the model parameters
-                optimizer_model.step()
-                optimizer_classification_head.step()
-
-                # Update the learning rate
-                scheduler_model.step()
-                scheduler_classification_head.step()
-
-                if step % 100 == 0 and step != 0:
-                    avg_train_loss = total_train_loss / 100
-                    print(f'Step {step}/{len(train_dataloader)} - Average training loss: {avg_train_loss:.4f}')
-
-                    total_train_loss = 0
-
-            avg_train_loss = total_train_loss / len(train_dataloader)
-            print(f'Training loss: {avg_train_loss:.4f}')
-
-            epsilon, best_alpha = optimizer_model.privacy_engine.get_privacy_spent(delta=1e-5)
-            print(f"For Pretrained Distilbert Model, ε = {epsilon:.2f}, δ = 1e-5 for α = {best_alpha}")
-
-            epsilon, best_alpha = optimizer_classification_head.privacy_engine.get_privacy_spent(delta=1e-5)
-            print(f"For Classification Head, ε = {epsilon:.2f}, δ = 1e-5 for α = {best_alpha}")
+            epsilon, best_alpha = optimizer.privacy_engine.get_privacy_spent(delta=1e-5)
+            print(f"For Model, ε = {epsilon:.2f}, δ = 1e-5 for α = {best_alpha}")
 
             # Evaluation loop
             self.model.eval()
-            self.classification_head.eval()
             total_eval_accuracy = 0
             total_eval_loss = 0
 
@@ -294,17 +229,14 @@ class DistilbertPrivacyModel:
 
                 with torch.no_grad():
                     outputs = self.model(b_input_ids, attention_mask=b_input_mask)
-                    last_hidden_states = outputs.last_hidden_state
-
-                    # Apply classification head
-                    logits = self.classification_head(last_hidden_states[:, 0, :])
-
-                    loss = F.cross_entropy(logits, b_labels)
+                    
+                    big_val, big_idx = torch.max(outputs.data, dim=1)
+                    
+                    loss = F.cross_entropy(outputs, b_labels)
 
                     total_eval_loss += loss.item()
-                    total_eval_accuracy += self.accuracy(logits, b_labels)
 
-                total_eval_accuracy += self.accuracy(logits, b_labels)
+                total_eval_accuracy += self.accuracy(big_idx, b_labels)
 
             avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
             print(f'Validation Accuracy: {avg_val_accuracy:.4f}')
@@ -380,15 +312,12 @@ class DistilbertPrivacyModel:
 
             with torch.no_grad():
                 outputs = self.model(b_input_ids, attention_mask=b_input_mask)
-                last_hidden_states = outputs.last_hidden_state
+                big_val, big_idx = torch.max(outputs.data, dim=1)
 
-                # Apply classification head
-                logits = self.classification_head(last_hidden_states[:, 0, :])
-
-            logits = logits.detach().cpu().numpy()
+            class_predictions = big_idx.detach().cpu().numpy()
 
             # Apply a threshold (e.g., 0.5) to convert logits to class predictions
-            class_predictions = np.argmax(logits, axis=1)
+            # class_predictions = np.argmax(logits, axis=1)
             
             predictions.extend(class_predictions.tolist())
 
