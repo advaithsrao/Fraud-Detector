@@ -134,10 +134,10 @@ class DistilbertPrivacyModel:
         validation_dataloader = DataLoader(val_dataset, batch_size=self.batch_size)
 
         # Initialize the Privacy engine, optimizer and learning rate scheduler
-        optimizer_model = AdamW(list(self.model.parameters()) + list(self.classification_head.parameters()),
+        optimizer_model = AdamW(list(self.classification_model.parameters()),
                           lr=self.learning_rate, eps=self.epsilon)
-
-        optimizer_classification_head = AdamW(list(self.model.parameters()) + list(self.classification_head.parameters()),
+        
+        optimizer_classification_head = AdamW(list(self.classification_head.parameters()),
                           lr=self.learning_rate, eps=self.epsilon)
         
         self.model, optimizer_model, train_dataloader = self.privacy_engine.make_private_with_epsilon(
@@ -145,17 +145,17 @@ class DistilbertPrivacyModel:
             optimizer=optimizer_model,
             data_loader=train_dataloader,
             target_delta=1 / len(train_dataloader),
-            target_epsilon=self.epsilon, 
+            target_epsilon=self.epsilon,
             epochs=self.num_epochs,
             max_grad_norm=0.1,
         )
 
-        self.classification_head , optimizer_classification_head, train_dataloader = self.privacy_engine.make_private_with_epsilon(
-            module=self.model,
+        self.classification_head, optimizer_classification_head, train_dataloader = self.privacy_engine.make_private_with_epsilon(
+            module=self.classification_head,
             optimizer=optimizer_classification_head,
             data_loader=train_dataloader,
             target_delta=1 / len(train_dataloader),
-            target_epsilon=self.epsilon, 
+            target_epsilon=self.epsilon,
             epochs=self.num_epochs,
             max_grad_norm=0.1,
         )
