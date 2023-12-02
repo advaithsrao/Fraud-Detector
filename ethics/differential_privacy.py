@@ -140,6 +140,69 @@ class DistilbertPrivacyModel:
         optimizer_classification_head = AdamW(list(self.classification_head.parameters()),
                           lr=self.learning_rate, eps=self.epsilon)
         
+        total_steps = len(train_dataloader) * self.num_epochs
+        scheduler_model = get_linear_schedule_with_warmup(optimizer_model, num_warmup_steps=0, num_training_steps=total_steps)
+        scheduler_classification_head = get_linear_schedule_with_warmup(optimizer_classification_head, num_warmup_steps=0, num_training_steps=total_steps)
+
+        # Initialize variables for early stopping
+        best_validation_loss = float("inf")
+        patience = 5  # Number of epochs to wait for improvement
+        wait = 0
+
+        for epoch in range(3):
+            print(f'{"="*20} Epoch {epoch + 1}/{self.num_epochs} {"="*20}')
+
+            # Training loop
+            self.model.train()
+            self.classification_head.train()
+            total_train_loss = 0
+
+            for step, batch in enumerate(train_dataloader):
+                b_input_ids = batch[0].to(self.device)
+                b_input_mask = batch[1].to(self.device)
+                b_labels = batch[2].to(self.device)
+
+                # Forward pass
+                outputs = self.model(b_input_ids, attention_mask=b_input_mask)
+                last_hidden_states = outputs.last_hidden_state
+
+                # Apply classification head
+                logits = self.classification_head(last_hidden_states[:, 0, :])
+
+                loss = F.cross_entropy(logits, b_labels)
+
+                total_train_loss += loss.item()
+
+                # Backward pass
+                loss.backward()
+
+                torch.nn.utils.clip_grad_norm_(list(self.model.parameters()) + list(self.classification_head.parameters()), 1.0)
+
+                # Update the model parameters
+                optimizer_model.step()
+                optimizer_classification_head.step()
+
+                # Update the learning rate
+                scheduler_model.step()
+                scheduler_classification_head.step()
+
+                if step % 100 == 0 and step != 0:
+                    avg_train_loss = total_train_loss / 100
+                    print(f'Step {step}/{len(train_dataloader)} - Average training loss: {avg_train_loss:.4f}')
+
+                    total_train_loss = 0
+
+            avg_train_loss = total_train_loss / len(train_dataloader)
+            print(f'Training loss: {avg_train_loss:.4f}')
+
+        print('\n Retraining with Differential Privacy')
+
+        optimizer_model = AdamW(list(self.model.parameters()),
+                        lr=self.learning_rate, eps=self.epsilon)
+        
+        optimizer_classification_head = AdamW(list(self.classification_head.parameters()),
+                        lr=self.learning_rate, eps=self.epsilon)
+        
         self.model, optimizer_model, train_dataloader = self.privacy_engine.make_private_with_epsilon(
             module=self.model,
             optimizer=optimizer_model,
@@ -163,11 +226,6 @@ class DistilbertPrivacyModel:
         total_steps = len(train_dataloader) * self.num_epochs
         scheduler_model = get_linear_schedule_with_warmup(optimizer_model, num_warmup_steps=0, num_training_steps=total_steps)
         scheduler_classification_head = get_linear_schedule_with_warmup(optimizer_classification_head, num_warmup_steps=0, num_training_steps=total_steps)
-
-        # Initialize variables for early stopping
-        best_validation_loss = float("inf")
-        patience = 5  # Number of epochs to wait for improvement
-        wait = 0
 
         for epoch in range(self.num_epochs):
             print(f'{"="*20} Epoch {epoch + 1}/{self.num_epochs} {"="*20}')
