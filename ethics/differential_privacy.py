@@ -211,10 +211,10 @@ class DistilbertPrivacyModel:
                     torch.nn.utils.clip_grad_norm_(list(self.model.parameters()), 1.0)
 
                     # Update the model parameters
-                    if (step + 1) % 1000 == 0 or step == len(train_dataloader) - 1:
-                        optimizer.step()
-                    else:
-                        optimizer.virtual_step()
+                    # if (step + 1) % 1000 == 0 or step == len(train_dataloader) - 1:
+                    optimizer.step()
+                    # else:
+                    #     optimizer.virtual_step()
                     
 
                     # Update the learning rate
