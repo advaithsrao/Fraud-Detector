@@ -154,26 +154,26 @@ class DistilbertPrivacyModel:
 
         MAX_GRAD_NORM = 0.1
 
-        # self.model, optimizer, train_dataloader = self.privacy_engine.make_private_with_epsilon(
-        #     module=self.model,
-        #     optimizer=optimizer,
-        #     data_loader=train_dataloader,
-        #     target_delta=1/len(train_dataloader),
-        #     target_epsilon=self.epsilon, 
-        #     epochs=self.num_epochs,
-        #     max_grad_norm=MAX_GRAD_NORM,
-        # )
-
-        self.privacy_engine = PrivacyEngine(
+        self.model, optimizer, train_dataloader = self.privacy_engine.make_private_with_epsilon(
             module=self.model,
-            sample_rate=self.batch_size / len(train_dataset),
-            target_delta = 1 / len(train_dataloader),
-            target_epsilon = self.epsilon, 
-            epochs = self.num_epochs,
+            optimizer=optimizer,
+            data_loader=train_dataloader,
+            target_delta=1/len(train_dataloader),
+            target_epsilon=self.epsilon, 
+            epochs=self.num_epochs,
             max_grad_norm=MAX_GRAD_NORM,
         )
+
+        # self.privacy_engine = PrivacyEngine(
+        #     module=self.model,
+        #     sample_rate=self.batch_size / len(train_dataset),
+        #     target_delta = 1 / len(train_dataloader),
+        #     target_epsilon = self.epsilon, 
+        #     epochs = self.num_epochs,
+        #     max_grad_norm=MAX_GRAD_NORM,
+        # )
         
-        self.privacy_engine.attach(optimizer)
+        # self.privacy_engine.attach(optimizer)
 
         # Initialize variables for early stopping
         best_validation_loss = float("inf")
@@ -193,7 +193,7 @@ class DistilbertPrivacyModel:
                 optimizer=optimizer
             ) as memory_safe_data_loader:
                 for step, batch in enumerate(memory_safe_data_loader):
-                    optimizer.zero_grad()
+                    # optimizer.zero_grad()
                     b_input_ids = batch[0].to(self.device, dtype=torch.long)
                     b_input_mask = batch[1].to(self.device, dtype=torch.long)
                     b_labels = batch[2].to(self.device, dtype=torch.long)
