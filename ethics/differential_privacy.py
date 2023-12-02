@@ -134,7 +134,7 @@ class DistilbertPrivacyModel:
         validation_dataloader = DataLoader(val_dataset, batch_size=self.batch_size)
 
         # Initialize the Privacy engine, optimizer and learning rate scheduler
-        optimizer_model = AdamW(list(self.classification_model.parameters()),
+        optimizer_model = AdamW(list(self.model.parameters()),
                           lr=self.learning_rate, eps=self.epsilon)
         
         optimizer_classification_head = AdamW(list(self.classification_head.parameters()),
