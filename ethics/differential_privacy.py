@@ -78,9 +78,9 @@ class DistilbertPrivacyModel:
         self.tokenizer = DistilBertTokenizer.from_pretrained(self.model_name)
 
         if self.path != '':
-            self.model = BaseModel.to(self.device)
-        else:
             self.model = BaseModel.from_pretrained(self.model_name).to(self.device)
+        else:
+            self.model = BaseModel.to(self.device)
 
         self.privacy_engine = PrivacyEngine()
         
