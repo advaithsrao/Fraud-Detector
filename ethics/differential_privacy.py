@@ -14,7 +14,7 @@ import torch
 from torch import nn
 
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, DistilBertModel
-from transformers import AdamW, get_linear_schedule_with_warmup
+from transformers import get_linear_schedule_with_warmup
 
 from torch.utils.data import DataLoader, TensorDataset
 import torch.nn.functional as F
@@ -147,8 +147,7 @@ class DistilbertPrivacyModel:
         validation_dataloader = DataLoader(val_dataset, batch_size=self.batch_size)
 
         # Initialize the Privacy engine, optimizer and learning rate scheduler
-        optimizer = AdamW(list(self.model.parameters()),
-                          lr=self.learning_rate, eps=self.epsilon)
+        optimizer = torch.optim.Adam(params = self.model.parameters(), lr=self.learning_rate)
         
         total_steps = len(train_dataloader) * self.num_epochs
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
@@ -198,7 +197,7 @@ class DistilbertPrivacyModel:
                     # Backward pass
                     loss.backward()
 
-                    torch.nn.utils.clip_grad_norm_(list(self.model.parameters()), 1.0)
+                    # torch.nn.utils.clip_grad_norm_(list(self.model.parameters()), 1.0)
 
                     # Update the model parameters
                     optimizer.step()
@@ -362,6 +361,6 @@ class DistilbertPrivacyModel:
         if isinstance(labels, np.ndarray):
             labels = torch.from_numpy(labels)
         
-        _, preds = torch.max(preds, dim=1)
+        n_correct = (preds==labels).sum().item()
         
-        return torch.tensor(torch.sum(preds == labels).item() / len(preds))
+        return n_correct/len(preds)
