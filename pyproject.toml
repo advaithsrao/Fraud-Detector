@@ -38,6 +38,7 @@ gensim = "*"
 
 #ethics packages
 #crypten = "*"
+opacus = "*"
 
 #mlops
 wandb = "*"
