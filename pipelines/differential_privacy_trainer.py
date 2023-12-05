@@ -1,4 +1,4 @@
-#usage: python3 -m pipelines.distilbert_trainer --num_epochs 20 --batch_size 8 --num_labels 2 --device 'cuda' --save_path '/tmp' --model_name 'distilbert-base-uncased' --use_aug 'True'
+#usage: python3 -m pipelines.distilbert_trainer --num_epochs 20 --batch_size 8 --n_estimators 100 --criterion gini --num_labels 2 --device 'cuda' --save_path '/tmp' --model_name 'distilbert' --use_aug 'True'
 import sys
 sys.path.append('..')
 
@@ -12,7 +12,7 @@ import os
 
 from detector.data_loader import LoadEnronData, LoadPhishingData, LoadSocEnggData
 from detector.labeler import EnronLabeler, MismatchLabeler
-from ethics.differential_privacy import DistilbertPrivacyModel
+from ethics.differential_privacy import DistilbertPrivacyModel, RandomForestPrivacyModel
 from detector.preprocessor import Preprocessor
 from utils.util_modeler import evaluate_and_log, get_f1_score, Augmentor
 
@@ -31,9 +31,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Distilbert Model Fraud Detector Pipeline")
     parser.add_argument("--save_path", "-s", type=str, default='/tmp/', help="Output save path")
     parser.add_argument("--num_labels", "-l", type=int, default=2, help="Number of labels")
-    parser.add_argument("--model_name", "-m", type=str, default='distilbert-base-uncased', help="Model Name")
+    parser.add_argument("--model_name", "-m", type=str, default='random_forest', help="Model Name. Options: ['distilbert','random_forest']")
     parser.add_argument("--num_epochs", "-e", type=int, default=40, help="Number of epochs")
     parser.add_argument("--batch_size", "-b", type=int, default=128, help="Batch size")
+    parser.add_argument("--n_estimators", "-n", type=int, default=100, help="Number of trees in the forest")
+    parser.add_argument("--criterion", "-c", type=str, default='gini', help="Function to measure the quality of a split")
     parser.add_argument("--learning_rate", "-lr", type=float, default=2e-05, help="Learning rate for the model")
     parser.add_argument("--device", "-d", type=str, default='cpu', help="Device to train the model on: 'cpu', 'cuda' or 'gpu'")
     parser.add_argument("--use_aug", "-u", type=bool, default=False, help="Whether to use data augmentation or not for training data balancing")
@@ -126,9 +128,13 @@ def data_split(data):
     
     return train, sanity, gold_fraud
 
-def train_model(train_data, hyper_params, use_aug=False):
+def train_model(train_data, hyper_params, use_aug=False, model_name='random_forest'):
     run = wandb.init(config=hyper_params)
-    model = DistilbertPrivacyModel(**hyper_params)
+
+    if model_name == 'distilbert':
+        model = DistilbertPrivacyModel(**hyper_params)
+    else:
+        model = RandomForestPrivacyModel(**hyper_params)
 
     # #drop train examples with Label=1 and Body less than 4 words
     # train_data = train_data[~((train_data['Label'] == 1) & (train_data['Body'].str.split().str.len() < 4))]
@@ -250,15 +256,25 @@ if __name__ == '__main__':
             args.use_aug = False
         else:
             raise ValueError("Invalid value for use_aug. Please enter True or False.")
+    
+    args.model_name = args.model_name.lower()
         
     # Define model hyperparameters
-    hyper_params = {
-        'num_labels': args.num_labels,
-        'num_epochs': args.num_epochs,
-        'batch_size': args.batch_size,
-        'learning_rate': args.learning_rate,
-        'device': args.device,
-    }
+    if args.model_name == 'distilbert':
+        hyper_params = {
+            'num_labels': args.num_labels,
+            'num_epochs': args.num_epochs,
+            'batch_size': args.batch_size,
+            'learning_rate': args.learning_rate,
+            'device': args.device,
+        }
+    else:
+        hyper_params = {
+            'num_labels': args.num_labels,
+            'n_estimators': args.n_estimators,
+            'criterion': args.criterion,
+        }
+
 
     # Log in to Weights and Biases
     wandbdict = {
@@ -290,7 +306,7 @@ if __name__ == '__main__':
     train_data, sanity_data, gold_fraud_data = data_split(data)
 
     # Train the model
-    model = train_model(train_data, hyper_params, use_aug=args.use_aug)
+    model = train_model(train_data, hyper_params, use_aug=args.use_aug, model_name = args.model_name)
 
     # Test the model
     f1_scores = test_model(train_data, sanity_data, gold_fraud_data, save_path)

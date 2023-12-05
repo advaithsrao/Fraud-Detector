@@ -32,6 +32,111 @@ from utils.util_modeler import Word2VecEmbedder, TPSampler
 from opacus import PrivacyEngine
 from opacus.utils.batch_memory_manager import BatchMemoryManager
 
+from diffprivlib.models.forest import RandomForestClassifier
+
+
+class RandomForestPrivacyModel:
+    def __init__(
+        self,
+        num_labels: int = 2,
+        n_estimators = 100,
+        criterion = 'gini',
+        njobs = -1
+    ):
+        self.num_labels = num_labels
+        self.n_estimators = n_estimators
+        self.criterion = criterion
+        self.njobs = njobs
+
+        self.vectorizer = Word2VecEmbedder()
+
+    def train(
+        self,
+        body: pd.Series | list[str],
+        label: pd.Series | list[int],
+    ):
+        """Trains the SVM model.
+
+        Args:
+            body (pd.Series | list[str]): The body of the email.
+            label (pd.Series | list[int]): The label of the email.
+
+        Raises:
+            ValueError: If the body and label are not of the same size.
+        """
+        if isinstance(body, pd.Series):
+            body = body.tolist()
+        if isinstance(label, pd.Series):
+            label = label.tolist()
+
+        # Train the RF model
+        epsilons = [1e-8, 1e-2, 1, 7.5]
+        accuracies = []
+
+        body_train, body_val, label_train, label_val = train_test_split(body, label, test_size=0.2, random_state=42)
+
+        for eps in epsilons:
+            self.model = Pipeline([
+                ('vectorizer', self.vectorizer),
+                ('classifier', RandomForestClassifier(n_estimators=self.n_estimators, epsilon=eps, criterion=self.criterion, n_jobs=self.njobs))
+            ])
+
+            self.model.fit(body_train, label_train)
+
+            accuracy = self.model.score(body_val, label_val)
+            print('********* \n Epsilon %.2f - Accuracy %.5f \n *********' % (eps, accuracy))
+            accuracies.append(accuracy)
+        
+        print(f'{"="*20} \n Best Model for Epsilon = {epsilons[np.argmax(accuracies)]} with Accuracy = {np.max(accuracies)} \n {"="*20}')
+        
+        #Fit model with best epsilon
+        self.model = Pipeline([
+                ('vectorizer', self.vectorizer),
+                ('classifier', RandomForestClassifier(n_estimators=self.n_estimators, epsilon=epsilons[np.argmax(accuracies)], criterion=self.criterion, n_jobs=self.njobs))
+            ])
+        
+        self.model.fit(body, label)
+
+        print(f'{"="*20} Training Done {"="*20}')
+
+    def predict(
+        self,
+        body: pd.Series | list[str],
+    ):
+        """Predicts the labels of the given data.
+
+        Args:
+            body (pd.Series | list[str]): The body of the email.
+
+        Returns:
+            np.array: The predictions of the model.
+        """
+        if isinstance(body, pd.Series):
+            body = body.tolist()
+
+        # Make predictions using the trained SVM model
+        predictions = self.model.predict(body)
+
+        if isinstance(predictions, np.ndarray):
+            predictions = predictions.tolist()
+
+        return predictions
+
+    def save_model(
+        self,
+        path: str,
+    ):
+        """Saves the model to the given path.
+
+        Args:
+            path (str): The path to save the model to.
+        """
+
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        
+        save_model(self.model, path)
+
 
 class DistilbertPrivacyModel:
     def __init__(

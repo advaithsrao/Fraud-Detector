@@ -1102,7 +1102,7 @@ class RandomForestFraudModel:
         if isinstance(label, pd.Series):
             label = label.tolist()
 
-        # Train the SVM model
+        # Train the RF model
         self.model.fit(body, label)
 
         print(f'{"="*20} Training Done {"="*20}')
