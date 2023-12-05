@@ -5,6 +5,7 @@ import shutil
 import pandas as pd
 import numpy as np
 from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -998,6 +999,88 @@ class SVMFraudModel:
         self.model = Pipeline([
             ('vectorizer', self.vectorizer),
             ('classifier', SVC(kernel=self.kernel, C=self.C, probability=True, random_state=42, verbose=True, class_weight='balanced'))
+        ])
+
+    def train(
+        self,
+        body: pd.Series | list[str],
+        label: pd.Series | list[int],
+    ):
+        """Trains the SVM model.
+
+        Args:
+            body (pd.Series | list[str]): The body of the email.
+            label (pd.Series | list[int]): The label of the email.
+
+        Raises:
+            ValueError: If the body and label are not of the same size.
+        """
+        if isinstance(body, pd.Series):
+            body = body.tolist()
+        if isinstance(label, pd.Series):
+            label = label.tolist()
+
+        # Train the SVM model
+        self.model.fit(body, label)
+
+        print(f'{"="*20} Training Done {"="*20}')
+
+    def predict(
+        self,
+        body: pd.Series | list[str],
+    ):
+        """Predicts the labels of the given data.
+
+        Args:
+            body (pd.Series | list[str]): The body of the email.
+
+        Returns:
+            np.array: The predictions of the model.
+        """
+        if isinstance(body, pd.Series):
+            body = body.tolist()
+
+        # Make predictions using the trained SVM model
+        predictions = self.model.predict(body)
+
+        if isinstance(predictions, np.ndarray):
+            predictions = predictions.tolist()
+
+        return predictions
+
+    def save_model(
+        self,
+        path: str,
+    ):
+        """Saves the model to the given path.
+
+        Args:
+            path (str): The path to save the model to.
+        """
+
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        
+        save_model(self.model, path)
+
+
+class RandomForestFraudModel:
+    def __init__(
+        self,
+        num_labels: int = 2,
+        n_estimators = 100,
+        criterion = 'gini',
+        njobs = -1
+    ):
+        self.num_labels = num_labels
+        self.n_estimators = n_estimators
+        self.criterion = criterion
+        self.njobs = njobs
+
+        self.vectorizer = Word2VecEmbedder()
+        self.model = Pipeline([
+            ('vectorizer', self.vectorizer),
+            ('classifier', RandomForestClassifier(n_estimators=self.n_estimators, criterion=self.criterion, n_jobs=self.njobs))
         ])
 
     def train(
