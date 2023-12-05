@@ -167,7 +167,7 @@ class DistilbertPrivacyModel:
 
         # Initialize variables for early stopping
         best_validation_loss = float("inf")
-        patience = 5  # Number of epochs to wait for improvement
+        patience = 10  # Number of epochs to wait for improvement
         wait = 0
 
         for epoch in range(self.num_epochs):
@@ -178,35 +178,35 @@ class DistilbertPrivacyModel:
             total_train_loss = 0
 
             for step, batch in enumerate(train_dataloader):
-                    optimizer.zero_grad()
-                    
-                    b_input_ids = batch[0].to(self.device)
-                    b_input_mask = batch[1].to(self.device)
-                    b_labels = batch[2].to(self.device)
+                optimizer.zero_grad()
+                
+                b_input_ids = batch[0].to(self.device)
+                b_input_mask = batch[1].to(self.device)
+                b_labels = batch[2].to(self.device)
 
-                    # Forward pass
-                    logits = self.model(b_input_ids, attention_mask=b_input_mask)
-                    
-                    loss = F.cross_entropy(logits, b_labels)
+                # Forward pass
+                logits = self.model(b_input_ids, attention_mask=b_input_mask)
+                
+                loss = F.cross_entropy(logits, b_labels)
 
-                    total_train_loss += loss.item()
+                total_train_loss += loss.item()
 
-                    # Backward pass
-                    loss.backward()
+                # Backward pass
+                loss.backward()
 
-                    # torch.nn.utils.clip_grad_norm_(list(self.model.parameters()), 1.0)
+                torch.nn.utils.clip_grad_norm_(list(self.model.parameters()), 1.0)
 
-                    # Update the model parameters
-                    optimizer.step()
+                # Update the model parameters
+                optimizer.step()
 
-                    # Update the learning rate
-                    scheduler.step()
+                # Update the learning rate
+                scheduler.step()
 
-                    if step % 100 == 0 and step != 0:
-                        avg_train_loss = total_train_loss / 100
-                        print(f'Step {step}/{len(train_dataloader)} - Average training loss: {avg_train_loss:.4f}')
+                if step % 100 == 0 and step != 0:
+                    avg_train_loss = total_train_loss / 100
+                    print(f'Step {step}/{len(train_dataloader)} - Average training loss: {avg_train_loss:.4f}')
 
-                        total_train_loss = 0
+                    total_train_loss = 0
 
             avg_train_loss = total_train_loss / len(train_dataloader)
             print(f'Training loss: {avg_train_loss:.4f}')

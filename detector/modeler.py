@@ -453,7 +453,7 @@ class RobertaFraudModel:
 
         # Initialize variables for early stopping
         best_validation_loss = float("inf")
-        patience = 5  # Number of epochs to wait for improvement
+        patience = 10  # Number of epochs to wait for improvement
         wait = 0
 
         for epoch in range(self.num_epochs):
