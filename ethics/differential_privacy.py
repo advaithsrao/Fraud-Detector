@@ -161,13 +161,15 @@ class DistilbertPrivacyModel:
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
 
         MAX_GRAD_NORM = 0.1
+        TARGET_EPSILON = 7.5
+        TARGET_DELTA = 1/total_steps
 
         self.model, optimizer, _ = self.privacy_engine.make_private_with_epsilon(
             module=self.model,
             optimizer=optimizer,
             data_loader=train_dataloader,
-            target_delta=1/total_steps,
-            target_epsilon=self.epsilon, 
+            target_delta=TARGET_DELTA,
+            target_epsilon=TARGET_EPSILON, 
             epochs=self.num_epochs,
             max_grad_norm=MAX_GRAD_NORM,
         )
