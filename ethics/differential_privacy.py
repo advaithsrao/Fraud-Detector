@@ -1,6 +1,9 @@
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 
+import sys
+sys.path.append('..')
+
 import shutil
 import pandas as pd
 import numpy as np
@@ -23,38 +26,12 @@ import wandb
 from mlflow.sklearn import save_model
 from scipy.sparse import hstack
 
+from base import BaseDistilbertModel
 from utils.util_modeler import Word2VecEmbedder, TPSampler
 
 from opacus import PrivacyEngine
 from opacus.utils.batch_memory_manager import BatchMemoryManager
 
-
-class BaseModel(nn.Module):
-    def __init__(self, num_labels, model_name='distilbert-base-uncased', device = 'cuda'):
-        super(BaseModel, self).__init__()
-
-        # Load pre-trained RobertaModel
-        self.model = DistilBertModel.from_pretrained(model_name).to(device)
-
-        for param in self.model.parameters():
-            param.requires_grad = False
-
-        # Define classification head
-        self.classification_head = nn.Sequential(
-            nn.Linear(self.model.config.hidden_size, 128),
-            nn.ReLU(),
-            nn.Linear(128, num_labels)
-        )
-
-    def forward(self, input_ids, attention_mask, labels=None):
-        # Get model outputs
-        outputs = self.model(input_ids, attention_mask=attention_mask)
-        last_hidden_states = outputs.last_hidden_state
-
-        # Apply classification head
-        logits = self.classification_head(last_hidden_states[:, 0, :])
-
-        return logits
 
 class DistilbertPrivacyModel:
     def __init__(
@@ -88,7 +65,7 @@ class DistilbertPrivacyModel:
         if self.path != '':
             raise NotImplementedError('Loading model from path is not implemented yet.')
         else:
-            self.model = BaseModel(num_labels=self.num_labels, model_name=self.model_name)
+            self.model = BaseDistilbertModel(num_labels=self.num_labels, model_name=self.model_name)
             self.model.to(self.device)
         
         self.privacy_engine = PrivacyEngine()
@@ -355,8 +332,17 @@ class DistilbertPrivacyModel:
             os.makedirs(path, exist_ok=True)
 
         # Save the transformer model and the classification head
-        self.model.save_pretrained(path)
-        torch.save(self.classification_head.state_dict(), os.path.join(path, 'classification_head.pth'))
+        # self.model.save_pretrained(path)
+        # torch.save(self.classification_head.state_dict(), os.path.join(path, 'classification_head.pth'))
+        try:
+            torch.save(self.privacy_engine.accountant)
+        except:
+            print('Accountant not saved')
+        
+        try:
+            torch.save(self.model._module.state_dict())
+        except:
+            print('Model not saved')
     
     def accuracy(
         self, 
