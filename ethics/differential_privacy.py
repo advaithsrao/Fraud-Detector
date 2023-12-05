@@ -132,8 +132,11 @@ class DistilbertPrivacyModel:
         validation_dataloader = DataLoader(val_dataset, batch_size=self.batch_size)
 
         # Initialize the optimizer and learning rate scheduler
-        optimizer = AdamW(list(self.model.parameters()),
-                          lr=self.learning_rate, eps=self.epsilon)
+        # optimizer = AdamW(list(self.model.parameters()),
+        #                   lr=self.learning_rate, eps=self.epsilon)
+        #SGD Optimizer
+        optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=0.9)
+
         total_steps = len(train_dataloader) * self.num_epochs
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
 
@@ -152,15 +155,14 @@ class DistilbertPrivacyModel:
         )
 
         print(
-            f"""
-                ******** 
-                Using,
-                sigma(Noise Multiplier) = {optimizer.noise_multiplier}
-                C(Max Grad Norm) = {MAX_GRAD_NORM}
-                Epsilon = {self.epsilon}
-                Delta = {1/total_steps}
-                ********
-            """
+            f"""******** 
+            Using,
+            sigma(Noise Multiplier) = {optimizer.noise_multiplier}
+            C(Max Grad Norm) = {MAX_GRAD_NORM}
+            Epsilon = {self.epsilon}
+            Target Epsilon = {TARGET_EPSILON}
+            Delta = {1/total_steps}
+            ********"""
         )
 
         # Initialize variables for early stopping
@@ -257,6 +259,8 @@ class DistilbertPrivacyModel:
                     'val_loss': avg_val_loss,
                     'val_accuracy': avg_val_accuracy,
                 })
+        
+        print(f'{"="*20} Training Done {"="*20}')
 
     def predict(
         self, 

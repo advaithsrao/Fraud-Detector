@@ -554,6 +554,8 @@ class RobertaFraudModel:
                     'val_loss': avg_val_loss,
                     'val_accuracy': avg_val_accuracy,
                 })
+        
+        print(f'{"="*20} Training Done {"="*20}')
 
     def predict(
         self, 
@@ -873,6 +875,8 @@ class DistilbertFraudModel:
                     'val_loss': avg_val_loss,
                     'val_accuracy': avg_val_accuracy,
                 })
+        
+        print(f'{"="*20} Training Done {"="*20}')
 
     def predict(
         self, 
@@ -1017,6 +1021,8 @@ class SVMFraudModel:
 
         # Train the SVM model
         self.model.fit(body, label)
+
+        print(f'{"="*20} Training Done {"="*20}')
 
     def predict(
         self,
