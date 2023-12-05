@@ -161,13 +161,20 @@ def train_model(train_data, hyper_params, use_aug=False, model_name='random_fore
     train_data.drop_duplicates(subset=['Body'], inplace=True)
     train_data.reset_index(drop=True, inplace=True)
 
-    # Call your code that produces output
-    model.train(
-        body=train_data['Body'], 
-        label=train_data['Label'], 
-        validation_size=0.2, 
-        wandb=run
-    )
+    if model_name == 'distilbert':
+        model.train(
+            body=train_data['Body'], 
+            label=train_data['Label'], 
+            validation_size=0.2, 
+            wandb=run
+        )
+    else:
+        model.train(
+            body=train_data['Body'], 
+            label=train_data['Label'],
+            wandb=run
+        )
+    
 
     # Restore the original stdout
     # sys.stdout = sys.__stdout__
