@@ -26,7 +26,7 @@ import wandb
 from mlflow.sklearn import save_model
 from scipy.sparse import hstack
 
-from base import BaseDistilbertModel
+from ethics.base import BaseDistilbertModel
 from utils.util_modeler import Word2VecEmbedder, TPSampler
 
 from opacus import PrivacyEngine
