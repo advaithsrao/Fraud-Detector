@@ -208,11 +208,27 @@ class NNFraudModel:
 
                 total_eval_accuracy += self.accuracy(logits, b_labels)
 
-            avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
-            print(f'Validation Accuracy: {avg_val_accuracy:.4f}')
+            if len(validation_dataloader) > 0:
+                avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
+                print(f'Validation Accuracy: {avg_val_accuracy:.4f}')
 
-            avg_val_loss = total_eval_loss / len(validation_dataloader)
-            print(f'Validation Loss: {avg_val_loss:.4f}')
+                avg_val_loss = total_eval_loss / len(validation_dataloader)
+                print(f'Validation Loss: {avg_val_loss:.4f}')
+
+                # Early stopping check
+                if avg_val_loss < best_validation_loss:
+                    best_validation_loss = avg_val_loss
+                    wait = 0
+                else:
+                    wait += 1
+
+                if wait >= patience:
+                    print(f'Early stopping after {patience} epochs without improvement.')
+                    break
+            else:
+                print('No validation data provided.')
+                avg_val_accuracy = 0
+                avg_val_loss = 0
 
             if wandb is not None:
                 wandb.log({
@@ -221,17 +237,6 @@ class NNFraudModel:
                     'val_loss': avg_val_loss,
                     'val_accuracy': avg_val_accuracy,
                 })
-
-            # Early stopping check
-            if avg_val_loss < best_validation_loss:
-                best_validation_loss = avg_val_loss
-                wait = 0
-            else:
-                wait += 1
-
-            if wait >= patience:
-                print(f'Early stopping after {patience} epochs without improvement.')
-                break
 
     def predict(
         self, 
@@ -520,11 +525,27 @@ class RobertaFraudModel:
 
                 total_eval_accuracy += self.accuracy(logits, b_labels)
 
-            avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
-            print(f'Validation Accuracy: {avg_val_accuracy:.4f}')
+            if len(validation_dataloader) > 0:
+                avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
+                print(f'Validation Accuracy: {avg_val_accuracy:.4f}')
 
-            avg_val_loss = total_eval_loss / len(validation_dataloader)
-            print(f'Validation Loss: {avg_val_loss:.4f}')
+                avg_val_loss = total_eval_loss / len(validation_dataloader)
+                print(f'Validation Loss: {avg_val_loss:.4f}')
+
+                # Early stopping check
+                if avg_val_loss < best_validation_loss:
+                    best_validation_loss = avg_val_loss
+                    wait = 0
+                else:
+                    wait += 1
+
+                if wait >= patience:
+                    print(f'Early stopping after {patience} epochs without improvement.')
+                    break
+            else:
+                print('No validation data provided.')
+                avg_val_accuracy = 0
+                avg_val_loss = 0
 
             if wandb is not None:
                 wandb.log({
@@ -533,17 +554,6 @@ class RobertaFraudModel:
                     'val_loss': avg_val_loss,
                     'val_accuracy': avg_val_accuracy,
                 })
-
-            # Early stopping check
-            if avg_val_loss < best_validation_loss:
-                best_validation_loss = avg_val_loss
-                wait = 0
-            else:
-                wait += 1
-
-            if wait >= patience:
-                print(f'Early stopping after {patience} epochs without improvement.')
-                break
 
     def predict(
         self, 
@@ -834,11 +844,27 @@ class DistilbertFraudModel:
 
                 total_eval_accuracy += self.accuracy(logits, b_labels)
 
-            avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
-            print(f'Validation Accuracy: {avg_val_accuracy:.4f}')
+            if len(validation_dataloader) > 0:
+                avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
+                print(f'Validation Accuracy: {avg_val_accuracy:.4f}')
 
-            avg_val_loss = total_eval_loss / len(validation_dataloader)
-            print(f'Validation Loss: {avg_val_loss:.4f}')
+                avg_val_loss = total_eval_loss / len(validation_dataloader)
+                print(f'Validation Loss: {avg_val_loss:.4f}')
+
+                # Early stopping check
+                if avg_val_loss < best_validation_loss:
+                    best_validation_loss = avg_val_loss
+                    wait = 0
+                else:
+                    wait += 1
+
+                if wait >= patience:
+                    print(f'Early stopping after {patience} epochs without improvement.')
+                    break
+            else:
+                print('No validation data provided.')
+                avg_val_accuracy = 0
+                avg_val_loss = 0
 
             if wandb is not None:
                 wandb.log({
@@ -847,17 +873,6 @@ class DistilbertFraudModel:
                     'val_loss': avg_val_loss,
                     'val_accuracy': avg_val_accuracy,
                 })
-
-            # Early stopping check
-            if avg_val_loss < best_validation_loss:
-                best_validation_loss = avg_val_loss
-                wait = 0
-            else:
-                wait += 1
-
-            if wait >= patience:
-                print(f'Early stopping after {patience} epochs without improvement.')
-                break
 
     def predict(
         self, 
