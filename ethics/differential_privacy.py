@@ -4,6 +4,8 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 import sys
 sys.path.append('..')
 
+import matplotlib.pyplot as plt
+
 import shutil
 import pandas as pd
 import numpy as np
@@ -54,6 +56,7 @@ class RandomForestPrivacyModel:
         self,
         body: pd.Series | list[str],
         label: pd.Series | list[int],
+        wandb: wandb = None,
     ):
         """Trains the SVM model.
 
@@ -70,7 +73,7 @@ class RandomForestPrivacyModel:
             label = label.tolist()
 
         # Train the RF model
-        epsilons = [1e-8, 1e-2, 1, 7.5]
+        epsilons = [1e-8, 1e-2, 1, 7.5, 20]
         accuracies = []
 
         body_train, body_val, label_train, label_val = train_test_split(body, label, test_size=0.2, random_state=42)
@@ -86,6 +89,18 @@ class RandomForestPrivacyModel:
             accuracy = self.model.score(body_val, label_val)
             print('********* \n Epsilon %.2f - Accuracy %.5f \n *********' % (eps, accuracy))
             accuracies.append(accuracy)
+        
+        plt.plot(epsilons, accuracies, marker='o')
+        plt.xscale('log')  # Use a logarithmic scale for better visibility
+        plt.xlabel('Epsilon')
+        plt.ylabel('Accuracy')
+        plt.title('Accuracy vs Epsilon')
+        plt.grid(True)
+
+        plt.savefig("rf_dp_accuracy_vs_epsilon_plot.png")
+
+        # Log the plot to wandb
+        wandb.log({"Accuracy vs Epsilon": plt})
         
         print(f'{"="*20} \n Best Model for Epsilon = {epsilons[np.argmax(accuracies)]} with Accuracy = {np.max(accuracies)} \n {"="*20}')
         
