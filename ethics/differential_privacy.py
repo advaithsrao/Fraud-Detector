@@ -84,7 +84,8 @@ class RandomForestPrivacyModel:
         accuracies = []
 
         for eps in epsilons:
-            self.model.set_params(classifier__epsilon=eps)
+            self.model.named_steps['classifier'] = RandomForestClassifier(n_estimators=self.n_estimators, criterion=self.criterion, n_jobs=self.njobs, epsilon=eps)
+            # self.model.set_params(classifier__epsilon=eps)
             self.model.fit(body_train, label_train)
 
             accuracy = get_f1_score(label_val, self.model.predict(body_val), average = 'macro')
@@ -106,10 +107,7 @@ class RandomForestPrivacyModel:
         print(f'{"="*20} \n Best Model for Epsilon = {epsilons[np.argmax(accuracies)]} with Validation F1 Score = {np.max(accuracies)} \n {"="*20}')
         
         #Fit model with best epsilon
-        self.model = Pipeline([
-                ('vectorizer', self.vectorizer),
-                ('classifier', RandomForestClassifier(n_estimators=self.n_estimators, epsilon=epsilons[np.argmax(accuracies)], criterion=self.criterion, n_jobs=self.njobs))
-            ])
+        self.model.named_steps['classifier'] = RandomForestClassifier(n_estimators=self.n_estimators, criterion=self.criterion, n_jobs=self.njobs, epsilon=epsilons[np.argmax(accuracies)])
         
         self.model.fit(body, label)
 
