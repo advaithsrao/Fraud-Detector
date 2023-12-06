@@ -127,7 +127,7 @@ def data_split(data):
     return train, sanity, gold_fraud
 
 def train_model(train_data, hyper_params, use_aug=False):
-    run = wandb.init(config=hyper_params)
+    # run = wandb.init(config=hyper_params)
     model = RobertaFraudModel(**hyper_params)
 
     if use_aug:

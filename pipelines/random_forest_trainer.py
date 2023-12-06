@@ -124,7 +124,7 @@ def data_split(data):
     return train, sanity, gold_fraud
 
 def train_model(train_data, hyper_params, use_aug=False):
-    run = wandb.init(config=hyper_params)
+    # run = wandb.init(config=hyper_params)
     model = RandomForestFraudModel(**hyper_params)
 
     # #drop train examples with Label=1 and Body less than 4 words

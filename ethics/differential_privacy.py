@@ -29,7 +29,7 @@ from mlflow.sklearn import save_model
 from scipy.sparse import hstack
 
 from ethics.base import BaseDistilbertModel
-from utils.util_modeler import Word2VecEmbedder, TPSampler
+from utils.util_modeler import Word2VecEmbedder, TPSampler, get_f1_score
 
 from opacus import PrivacyEngine
 from opacus.utils.batch_memory_manager import BatchMemoryManager
@@ -49,6 +49,11 @@ class RandomForestPrivacyModel:
         self.n_estimators = n_estimators
         self.criterion = criterion
         self.njobs = njobs
+
+        self.model = Pipeline([
+            ('vectorizer', self.vectorizer),
+            ('classifier', RandomForestClassifier(n_estimators=self.n_estimators, criterion=self.criterion, n_jobs=self.njobs))
+        ])
 
         self.vectorizer = Word2VecEmbedder()
 
@@ -72,29 +77,25 @@ class RandomForestPrivacyModel:
         if isinstance(label, pd.Series):
             label = label.tolist()
 
+        body_train, body_val, label_train, label_val = train_test_split(body, label, test_size=0.2, random_state=42, stratify=label)
+
         # Train the RF model
         epsilons = [1e-8, 1e-2, 1, 7.5, 20]
         accuracies = []
 
-        body_train, body_val, label_train, label_val = train_test_split(body, label, test_size=0.2, random_state=42, stratify=label)
-
         for eps in epsilons:
-            self.model = Pipeline([
-                ('vectorizer', self.vectorizer),
-                ('classifier', RandomForestClassifier(n_estimators=self.n_estimators, epsilon=eps, criterion=self.criterion, n_jobs=self.njobs))
-            ])
-
+            self.model.set_params(classifier__epsilon=eps)
             self.model.fit(body_train, label_train)
 
-            accuracy = self.model.score(body_val, label_val)
-            print('********* \n Epsilon %.2f - Accuracy %.5f \n *********' % (eps, accuracy))
+            accuracy = get_f1_score(label_val, self.model.predict(body_val), average = 'macro')
+            print('********* \n Epsilon %.2f - Validation F1 Score %.5f \n *********' % (eps, accuracy))
             accuracies.append(accuracy)
         
         plt.plot(epsilons, accuracies, marker='o')
         plt.xscale('log')  # Use a logarithmic scale for better visibility
         plt.xlabel('Epsilon')
-        plt.ylabel('Accuracy')
-        plt.title('Accuracy vs Epsilon')
+        plt.ylabel('F1 Score')
+        plt.title('F1 Score vs Epsilon')
         plt.grid(True)
 
         plt.savefig("rf_dp_accuracy_vs_epsilon_plot.png")
@@ -102,7 +103,7 @@ class RandomForestPrivacyModel:
         # Log the plot to wandb
         wandb.log({"Accuracy vs Epsilon": plt})
         
-        print(f'{"="*20} \n Best Model for Epsilon = {epsilons[np.argmax(accuracies)]} with Accuracy = {np.max(accuracies)} \n {"="*20}')
+        print(f'{"="*20} \n Best Model for Epsilon = {epsilons[np.argmax(accuracies)]} with Validation F1 Score = {np.max(accuracies)} \n {"="*20}')
         
         #Fit model with best epsilon
         self.model = Pipeline([

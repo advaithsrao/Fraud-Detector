@@ -123,8 +123,8 @@ def data_split(data):
         
     return train, sanity, gold_fraud
 
-def train_model(train_data, hyper_params, use_aug=False):
-    run = wandb.init(config=hyper_params)
+def train_model(train_data, hyper_params, use_aug=False, wandb = None):
+    # run = wandb.init(config=hyper_params)
     model = RandomForestPrivacyModel(**hyper_params)
 
     # #drop train examples with Label=1 and Body less than 4 words
@@ -153,7 +153,7 @@ def train_model(train_data, hyper_params, use_aug=False):
     train_data.reset_index(drop=True, inplace=True)
     
     # Call your code that produces output
-    model.train(body=train_data['Body'], label=train_data['Label'])
+    model.train(body=train_data['Body'], label=train_data['Label'], wandb = wandb)
     return model
 
 def test_and_save_model(train_data, sanity_data, gold_fraud_data, save_path):
@@ -272,7 +272,7 @@ if __name__ == '__main__':
     train_data, sanity_data, gold_fraud_data = data_split(data)
 
     # Train the model
-    model = train_model(train_data, hyper_params, use_aug=args.use_aug)
+    model = train_model(train_data, hyper_params, use_aug=args.use_aug, wandb = run)
 
     # Test the model
     f1_scores = test_and_save_model(train_data, sanity_data, gold_fraud_data, save_path)
