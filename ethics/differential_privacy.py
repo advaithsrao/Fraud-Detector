@@ -50,12 +50,12 @@ class RandomForestPrivacyModel:
         self.criterion = criterion
         self.njobs = njobs
 
+        self.vectorizer = Word2VecEmbedder()
+        
         self.model = Pipeline([
             ('vectorizer', self.vectorizer),
             ('classifier', RandomForestClassifier(n_estimators=self.n_estimators, criterion=self.criterion, n_jobs=self.njobs))
         ])
-
-        self.vectorizer = Word2VecEmbedder()
 
     def train(
         self,
