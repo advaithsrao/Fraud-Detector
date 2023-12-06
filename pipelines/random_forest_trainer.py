@@ -28,11 +28,12 @@ config.read(
 )
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Random Model Fraud Detector Pipeline")
+    parser = argparse.ArgumentParser(description="Random Forest Fraud Detector Pipeline")
     parser.add_argument("--save_path", "-s", type=str, default='/tmp/', help="Output save path")
     parser.add_argument("--num_labels", "-l", type=int, default=2, help="Number of labels")
     parser.add_argument("--n_estimators", "-n", type=int, default=100, help="Number of trees in the forest")
     parser.add_argument("--criterion", "-c", type=str, default='gini', help="Function to measure the quality of a split")
+    parser.add_argument("--n_jobs", "-nj", type=int, default=-1, help="Number of jobs to run in parallel")
     parser.add_argument("--use_aug", "-u", type=bool, default=False, help="Whether to use data augmentation or not for training data balancing")
     return parser.parse_args()
 
@@ -239,7 +240,8 @@ if __name__ == '__main__':
     hyper_params = {
         'num_labels': args.num_labels,
         'n_estimators': args.n_estimators,
-        'criterion': args.criterion
+        'criterion': args.criterion,
+        'n_jobs': args.n_jobs
     }
 
     # Log in to Weights and Biases

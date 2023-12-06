@@ -35,6 +35,8 @@ from opacus import PrivacyEngine
 from opacus.utils.batch_memory_manager import BatchMemoryManager
 
 from diffprivlib.models.forest import RandomForestClassifier
+from diffprivlib.models.logistic_regression import LogisticRegression
+from diffprivlib.models.naive_bayes import GaussianNB
 
 
 class RandomForestPrivacyModel:
@@ -43,12 +45,12 @@ class RandomForestPrivacyModel:
         num_labels: int = 2,
         n_estimators = 100,
         criterion = 'gini',
-        njobs = -1
+        n_jobs = -1
     ):
         self.num_labels = num_labels
         self.n_estimators = n_estimators
         self.criterion = criterion
-        self.njobs = njobs
+        self.n_jobs = n_jobs
 
         self.vectorizer = Word2VecEmbedder()
         
@@ -63,7 +65,7 @@ class RandomForestPrivacyModel:
         label: pd.Series | list[int],
         wandb: wandb = None,
     ):
-        """Trains the SVM model.
+        """Trains the Random Forest model.
 
         Args:
             body (pd.Series | list[str]): The body of the email.
@@ -84,7 +86,7 @@ class RandomForestPrivacyModel:
         accuracies = []
 
         for eps in epsilons:
-            self.model.named_steps['classifier'] = RandomForestClassifier(n_estimators=self.n_estimators, criterion=self.criterion, n_jobs=self.njobs, epsilon=eps)
+            self.model.named_steps['classifier'] = RandomForestClassifier(n_estimators=self.n_estimators, criterion=self.criterion, n_jobs=self.n_jobs, epsilon=eps)
             # self.model.set_params(classifier__epsilon=eps)
             self.model.fit(body_train, label_train)
 
@@ -107,7 +109,227 @@ class RandomForestPrivacyModel:
         print(f'{"="*20} \n Best Model for Epsilon = {epsilons[np.argmax(accuracies)]} with Validation F1 Score = {np.max(accuracies)} \n {"="*20}')
         
         #Fit model with best epsilon
-        self.model.named_steps['classifier'] = RandomForestClassifier(n_estimators=self.n_estimators, criterion=self.criterion, n_jobs=self.njobs, epsilon=epsilons[np.argmax(accuracies)])
+        self.model.named_steps['classifier'] = RandomForestClassifier(n_estimators=self.n_estimators, criterion=self.criterion, n_jobs=self.n_jobs, epsilon=epsilons[np.argmax(accuracies)])
+        
+        self.model.fit(body, label)
+
+        print(f'{"="*20} Training Done {"="*20}')
+
+    def predict(
+        self,
+        body: pd.Series | list[str],
+    ):
+        """Predicts the labels of the given data.
+
+        Args:
+            body (pd.Series | list[str]): The body of the email.
+
+        Returns:
+            np.array: The predictions of the model.
+        """
+        if isinstance(body, pd.Series):
+            body = body.tolist()
+
+        # Make predictions using the trained SVM model
+        predictions = self.model.predict(body)
+
+        if isinstance(predictions, np.ndarray):
+            predictions = predictions.tolist()
+
+        return predictions
+
+    def save_model(
+        self,
+        path: str,
+    ):
+        """Saves the model to the given path.
+
+        Args:
+            path (str): The path to save the model to.
+        """
+
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        
+        save_model(self.model, path)
+
+
+class LogisticRegressionPrivacyModel:
+    def __init__(
+        self,
+        num_labels: int = 2,
+        n_jobs = -1
+    ):
+        self.num_labels = num_labels
+        self.n_jobs = n_jobs
+
+        self.vectorizer = Word2VecEmbedder()
+        
+        self.model = Pipeline([
+            ('vectorizer', self.vectorizer),
+            ('classifier', LogisticRegression(n_jobs=self.n_jobs))
+        ])
+
+    def train(
+        self,
+        body: pd.Series | list[str],
+        label: pd.Series | list[int],
+        wandb: wandb = None,
+    ):
+        """Trains the Logistic Regression model.
+
+        Args:
+            body (pd.Series | list[str]): The body of the email.
+            label (pd.Series | list[int]): The label of the email.
+
+        Raises:
+            ValueError: If the body and label are not of the same size.
+        """
+        if isinstance(body, pd.Series):
+            body = body.tolist()
+        if isinstance(label, pd.Series):
+            label = label.tolist()
+
+        body_train, body_val, label_train, label_val = train_test_split(body, label, test_size=0.2, random_state=42, stratify=label)
+
+        # Train the RF model
+        epsilons = [1e-8, 1e-2, 1, 7.5, 20]
+        accuracies = []
+
+        for eps in epsilons:
+            self.model.named_steps['classifier'] = LogisticRegression(n_jobs=self.n_jobs, epsilon=eps)
+            # self.model.set_params(classifier__epsilon=eps)
+            self.model.fit(body_train, label_train)
+
+            accuracy = get_f1_score(label_val, self.model.predict(body_val), average = 'macro')
+            print('********* \n Epsilon %.2f - Validation F1 Score %.5f \n *********' % (eps, accuracy))
+            accuracies.append(accuracy)
+        
+        plt.plot(epsilons, accuracies, marker='o')
+        plt.xscale('log')  # Use a logarithmic scale for better visibility
+        plt.xlabel('Epsilon')
+        plt.ylabel('F1 Score')
+        plt.title('F1 Score vs Epsilon')
+        plt.grid(True)
+
+        plt.savefig("lr_dp_accuracy_vs_epsilon_plot.png")
+
+        # Log the plot to wandb
+        wandb.log({"Accuracy vs Epsilon": plt})
+        
+        print(f'{"="*20} \n Best Model for Epsilon = {epsilons[np.argmax(accuracies)]} with Validation F1 Score = {np.max(accuracies)} \n {"="*20}')
+        
+        #Fit model with best epsilon
+        self.model.named_steps['classifier'] = LogisticRegression(n_jobs=self.n_jobs, epsilon=epsilons[np.argmax(accuracies)])
+        
+        self.model.fit(body, label)
+
+        print(f'{"="*20} Training Done {"="*20}')
+
+    def predict(
+        self,
+        body: pd.Series | list[str],
+    ):
+        """Predicts the labels of the given data.
+
+        Args:
+            body (pd.Series | list[str]): The body of the email.
+
+        Returns:
+            np.array: The predictions of the model.
+        """
+        if isinstance(body, pd.Series):
+            body = body.tolist()
+
+        # Make predictions using the trained SVM model
+        predictions = self.model.predict(body)
+
+        if isinstance(predictions, np.ndarray):
+            predictions = predictions.tolist()
+
+        return predictions
+
+    def save_model(
+        self,
+        path: str,
+    ):
+        """Saves the model to the given path.
+
+        Args:
+            path (str): The path to save the model to.
+        """
+
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        
+        save_model(self.model, path)
+
+
+class NaiveBayesPrivacyModel:
+    def __init__(
+        self,
+        num_labels: int = 2,
+    ):
+        self.num_labels = num_labels
+
+        self.vectorizer = Word2VecEmbedder()
+        
+        self.model = Pipeline([
+            ('vectorizer', self.vectorizer),
+            ('classifier', GaussianNB())
+        ])
+
+    def train(
+        self,
+        body: pd.Series | list[str],
+        label: pd.Series | list[int],
+        wandb: wandb = None,
+    ):
+        """Trains the Naive Bayes model.
+
+        Args:
+            body (pd.Series | list[str]): The body of the email.
+            label (pd.Series | list[int]): The label of the email.
+
+        Raises:
+            ValueError: If the body and label are not of the same size.
+        """
+        if isinstance(body, pd.Series):
+            body = body.tolist()
+        if isinstance(label, pd.Series):
+            label = label.tolist()
+
+        body_train, body_val, label_train, label_val = train_test_split(body, label, test_size=0.2, random_state=42, stratify=label)
+
+        # Train the RF model
+        epsilons = [1e-8, 1e-2, 1, 7.5, 20]
+        accuracies = []
+
+        for eps in epsilons:
+            self.model.named_steps['classifier'] = GaussianNB(epsilon=eps)
+            # self.model.set_params(classifier__epsilon=eps)
+            self.model.fit(body_train, label_train)
+
+            accuracy = get_f1_score(label_val, self.model.predict(body_val), average = 'macro')
+            print('********* \n Epsilon %.2f - Validation F1 Score %.5f \n *********' % (eps, accuracy))
+            accuracies.append(accuracy)
+        
+        plt.plot(epsilons, accuracies, marker='o')
+        plt.xscale('log')  # Use a logarithmic scale for better visibility
+        plt.xlabel('Epsilon')
+        plt.ylabel('F1 Score')
+        plt.title('F1 Score vs Epsilon')
+        plt.grid(True)
+
+        plt.savefig("nb_dp_accuracy_vs_epsilon_plot.png")
+
+        # Log the plot to wandb
+        wandb.log({"Accuracy vs Epsilon": plt})
+        
+        print(f'{"="*20} \n Best Model for Epsilon = {epsilons[np.argmax(accuracies)]} with Validation F1 Score = {np.max(accuracies)} \n {"="*20}')
+        
+        #Fit model with best epsilon
+        self.model.named_steps['classifier'] = GaussianNB(epsilon=epsilons[np.argmax(accuracies)])
         
         self.model.fit(body, label)
 
