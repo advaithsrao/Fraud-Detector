@@ -485,7 +485,7 @@ class DistilbertPrivacyModel:
         TARGET_EPSILON = 7.5
         TARGET_DELTA = 1/total_steps
 
-        self.model, optimizer, _ = self.privacy_engine.make_private_with_epsilon(
+        self.model, optimizer, train_dataloader = self.privacy_engine.make_private_with_epsilon(
             module=self.model,
             optimizer=optimizer,
             data_loader=train_dataloader,
