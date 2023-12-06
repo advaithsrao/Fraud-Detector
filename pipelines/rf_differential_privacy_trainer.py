@@ -12,7 +12,7 @@ import os
 
 from detector.data_loader import LoadEnronData, LoadPhishingData, LoadSocEnggData
 from detector.labeler import EnronLabeler, MismatchLabeler
-from detector.modeler import RandomForestFraudModel
+from ethics.differential_privacy import RandomForestPrivacyModel
 from detector.preprocessor import Preprocessor
 from utils.util_modeler import evaluate_and_log, get_f1_score, Augmentor
 
@@ -28,7 +28,7 @@ config.read(
 )
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Random Model Fraud Detector Pipeline")
+    parser = argparse.ArgumentParser(description="Random Forest Model Fraud Detector Pipeline")
     parser.add_argument("--save_path", "-s", type=str, default='/tmp/', help="Output save path")
     parser.add_argument("--num_labels", "-l", type=int, default=2, help="Number of labels")
     parser.add_argument("--n_estimators", "-n", type=int, default=100, help="Number of trees in the forest")

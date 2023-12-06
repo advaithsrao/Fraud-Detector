@@ -76,7 +76,7 @@ class RandomForestPrivacyModel:
         epsilons = [1e-8, 1e-2, 1, 7.5, 20]
         accuracies = []
 
-        body_train, body_val, label_train, label_val = train_test_split(body, label, test_size=0.2, random_state=42)
+        body_train, body_val, label_train, label_val = train_test_split(body, label, test_size=0.2, random_state=42, stratify=label)
 
         for eps in epsilons:
             self.model = Pipeline([
