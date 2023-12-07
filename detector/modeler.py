@@ -4,8 +4,12 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 import shutil
 import pandas as pd
 import numpy as np
+
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -1070,17 +1074,17 @@ class RandomForestFraudModel:
         num_labels: int = 2,
         n_estimators = 100,
         criterion = 'gini',
-        njobs = -1
+        n_jobs = -1
     ):
         self.num_labels = num_labels
         self.n_estimators = n_estimators
         self.criterion = criterion
-        self.njobs = njobs
+        self.n_jobs = n_jobs
 
         self.vectorizer = Word2VecEmbedder()
         self.model = Pipeline([
             ('vectorizer', self.vectorizer),
-            ('classifier', RandomForestClassifier(n_estimators=self.n_estimators, criterion=self.criterion, n_jobs=self.njobs))
+            ('classifier', RandomForestClassifier(n_estimators=self.n_estimators, criterion=self.criterion, n_jobs=self.n_jobs))
         ])
 
     def train(
@@ -1088,7 +1092,161 @@ class RandomForestFraudModel:
         body: pd.Series | list[str],
         label: pd.Series | list[int],
     ):
-        """Trains the SVM model.
+        """Trains the Random Forest model.
+
+        Args:
+            body (pd.Series | list[str]): The body of the email.
+            label (pd.Series | list[int]): The label of the email.
+
+        Raises:
+            ValueError: If the body and label are not of the same size.
+        """
+        if isinstance(body, pd.Series):
+            body = body.tolist()
+        if isinstance(label, pd.Series):
+            label = label.tolist()
+
+        # Train the RF model
+        self.model.fit(body, label)
+
+        print(f'{"="*20} Training Done {"="*20}')
+
+    def predict(
+        self,
+        body: pd.Series | list[str],
+    ):
+        """Predicts the labels of the given data.
+
+        Args:
+            body (pd.Series | list[str]): The body of the email.
+
+        Returns:
+            np.array: The predictions of the model.
+        """
+        if isinstance(body, pd.Series):
+            body = body.tolist()
+
+        # Make predictions using the trained SVM model
+        predictions = self.model.predict(body)
+
+        if isinstance(predictions, np.ndarray):
+            predictions = predictions.tolist()
+
+        return predictions
+
+    def save_model(
+        self,
+        path: str,
+    ):
+        """Saves the model to the given path.
+
+        Args:
+            path (str): The path to save the model to.
+        """
+
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        
+        save_model(self.model, path)
+
+
+class LogisticRegressionFraudModel:
+    def __init__(
+        self,
+        num_labels: int = 2,
+        n_jobs = -1
+    ):
+        self.num_labels = num_labels
+        self.n_jobs = n_jobs
+
+        self.vectorizer = Word2VecEmbedder()
+        self.model = Pipeline([
+            ('vectorizer', self.vectorizer),
+            ('classifier', LogisticRegression(n_jobs=self.n_jobs))
+        ])
+
+    def train(
+        self,
+        body: pd.Series | list[str],
+        label: pd.Series | list[int],
+    ):
+        """Trains the Logistic Regression model.
+
+        Args:
+            body (pd.Series | list[str]): The body of the email.
+            label (pd.Series | list[int]): The label of the email.
+
+        Raises:
+            ValueError: If the body and label are not of the same size.
+        """
+        if isinstance(body, pd.Series):
+            body = body.tolist()
+        if isinstance(label, pd.Series):
+            label = label.tolist()
+
+        # Train the RF model
+        self.model.fit(body, label)
+
+        print(f'{"="*20} Training Done {"="*20}')
+
+    def predict(
+        self,
+        body: pd.Series | list[str],
+    ):
+        """Predicts the labels of the given data.
+
+        Args:
+            body (pd.Series | list[str]): The body of the email.
+
+        Returns:
+            np.array: The predictions of the model.
+        """
+        if isinstance(body, pd.Series):
+            body = body.tolist()
+
+        # Make predictions using the trained SVM model
+        predictions = self.model.predict(body)
+
+        if isinstance(predictions, np.ndarray):
+            predictions = predictions.tolist()
+
+        return predictions
+
+    def save_model(
+        self,
+        path: str,
+    ):
+        """Saves the model to the given path.
+
+        Args:
+            path (str): The path to save the model to.
+        """
+
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        
+        save_model(self.model, path)
+
+
+class NaiveBayesFraudModel:
+    def __init__(
+        self,
+        num_labels: int = 2
+    ):
+        self.num_labels = num_labels
+
+        self.vectorizer = Word2VecEmbedder()
+        self.model = Pipeline([
+            ('vectorizer', self.vectorizer),
+            ('classifier', GaussianNB())
+        ])
+
+    def train(
+        self,
+        body: pd.Series | list[str],
+        label: pd.Series | list[int],
+    ):
+        """Trains the Gaussian NB model.
 
         Args:
             body (pd.Series | list[str]): The body of the email.

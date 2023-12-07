@@ -1,4 +1,4 @@
-#usage: python3 -m pipelines.distilbert_trainer --num_epochs 20 --batch_size 8 --n_estimators 100 --criterion gini --num_labels 2 --device 'cuda' --save_path '/tmp' --model_name 'logistic_regression' --use_aug 'True'
+#usage: python3 -m pipelines.svm_trainer --num_labels 2 --C 10 --kernel 'rbf' --save_path '/tmp/model' --use_aug 'True'
 import sys
 sys.path.append('..')
 
@@ -10,10 +10,9 @@ import pandas as pd
 import sys
 import os
 
-
 from detector.data_loader import LoadEnronData, LoadPhishingData, LoadSocEnggData
 from detector.labeler import EnronLabeler, MismatchLabeler
-from ethics.differential_privacy import DistilbertPrivacyModel, RandomForestPrivacyModel, LogisticRegressionPrivacyModel, NaiveBayesPrivacyModel
+from detector.modeler import LogisticRegressionFraudModel
 from detector.preprocessor import Preprocessor
 from utils.util_modeler import evaluate_and_log, get_f1_score, Augmentor
 
@@ -29,18 +28,11 @@ config.read(
 )
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Differential Privacy Detector Pipeline")
+    parser = argparse.ArgumentParser(description="Logistic Regression Model Fraud Detector Pipeline")
     parser.add_argument("--save_path", "-s", type=str, default='/tmp/', help="Output save path")
     parser.add_argument("--num_labels", "-l", type=int, default=2, help="Number of labels")
-    parser.add_argument("--model_name", "-m", type=str, default='logistic_regression', help="Model Name. Options: ['logistic_regression','distilbert','random_forest', 'naive_bayes']. Default: 'logistic_regression'")
-    parser.add_argument("--num_epochs", "-e", type=int, default=40, help="Number of epochs")
-    parser.add_argument("--batch_size", "-b", type=int, default=128, help="Batch size")
-    parser.add_argument("--n_estimators", "-n", type=int, default=100, help="Number of trees in the forest")
-    parser.add_argument("--criterion", "-c", type=str, default='gini', help="Function to measure the quality of a split")
-    parser.add_argument("--learning_rate", "-lr", type=float, default=2e-05, help="Learning rate for the model")
-    parser.add_argument("--device", "-d", type=str, default='cpu', help="Device to train the model on: 'cpu', 'cuda' or 'gpu'")
+    parser.add_argument("--n_jobs", "-nj", type=int, default=-1, help="Number of jobs to run in parallel")
     parser.add_argument("--use_aug", "-u", type=bool, default=False, help="Whether to use data augmentation or not for training data balancing")
-    parser.add_argument("--n_jobs", "-nj", type=int, default=-1, help="Number of jobs to run in parallel for both fit and predict. -1 means using all processors.")
     return parser.parse_args()
 
 def load_data():
@@ -113,7 +105,7 @@ def data_split(data):
         # For sanity_set, take first 5000 emails with Sender-Type = 'Internal'
         sanity = data[
             (data['Sender-Type'] == 'Internal') & (data['Source'] == 'Enron Data')
-        ].head(200000)
+        ].head(5000)
         sanity['Split'] = 'Sanity'
 
         # For train_set, take all data not in gold_fraud_set and sanity_set
@@ -127,22 +119,12 @@ def data_split(data):
         train = data[data['Split'] == 'Train']
         gold_fraud = data[data['Split'] == 'Gold Fraud']
         sanity = data[data['Split'] == 'Sanity']
-    
+        
     return train, sanity, gold_fraud
 
-def train_model(train_data, hyper_params, use_aug=False, model_name='random_forest'):
+def train_model(train_data, hyper_params, use_aug=False):
     run = wandb.init(config=hyper_params)
-
-    if model_name == 'distilbert':
-        model = DistilbertPrivacyModel(**hyper_params)
-    elif model_name == 'random_forest':
-        model = RandomForestPrivacyModel(**hyper_params)
-    elif model_name == 'logistic_regression':
-        model = LogisticRegressionPrivacyModel(**hyper_params)
-    elif model_name == 'naive_bayes':
-        model = NaiveBayesPrivacyModel(**hyper_params)
-    else:
-        raise ValueError("Invalid model name. Please enter one of ['distilbert','random_forest', 'logistic_regression', 'naive_bayes']")
+    model = LogisticRegressionFraudModel(**hyper_params)
 
     # #drop train examples with Label=1 and Body less than 4 words
     # train_data = train_data[~((train_data['Label'] == 1) & (train_data['Body'].str.split().str.len() < 4))]
@@ -168,34 +150,16 @@ def train_model(train_data, hyper_params, use_aug=False, model_name='random_fore
 
     train_data.drop_duplicates(subset=['Body'], inplace=True)
     train_data.reset_index(drop=True, inplace=True)
-
-    if model_name == 'distilbert':
-        model.train(
-            body=train_data['Body'], 
-            label=train_data['Label'], 
-            validation_size=0.2, 
-            wandb=run
-        )
-    else:
-        model.train(
-            body=train_data['Body'], 
-            label=train_data['Label'],
-            wandb=run
-        )
     
-
-    # Restore the original stdout
-    # sys.stdout = sys.__stdout__
-
-    # Close the log file
-    # log_file.close()
+    # Call your code that produces output
+    model.train(body=train_data['Body'], label=train_data['Label'])
     return model
 
-def test_model(train_data, sanity_data, gold_fraud_data, save_path):
+def test_and_save_model(train_data, sanity_data, gold_fraud_data, save_path):
     # Define a dictionary to store the f1 scores
     f1_scores = {}
     
-    # Define a dictionary to store the predictions, true labels for each dataset
+    # # Define a dictionary to store the predictions, true labels for each dataset
     # true_pred_map = {
     #     'train':{},
     #     'sanity':{},
@@ -240,7 +204,7 @@ def dump_logs_to_wandb(hyper_params, f1_scores, save_path):
     run.config.update(all_params)
 
     # Log the model to Weights and Biases
-    model_path = os.path.join(save_path,'model')
+    model_path = os.path.join(save_path, 'model')
     model_artifact = wandb.Artifact("fraud-detector-model", type="model")
     model_artifact.add_dir(model_path)
     run.use_artifact(model_artifact)
@@ -261,9 +225,7 @@ def dump_logs_to_wandb(hyper_params, f1_scores, save_path):
 if __name__ == '__main__':
     # Parse the arguments
     args = parse_args()
-    
-    args.device = args.device if args.device != 'gpu' else 'cuda'
-    
+
     if type(args.use_aug) == str:
         if args.use_aug.lower() == 'true':
             args.use_aug = True
@@ -272,36 +234,11 @@ if __name__ == '__main__':
         else:
             raise ValueError("Invalid value for use_aug. Please enter True or False.")
     
-    args.model_name = args.model_name.lower()
-        
     # Define model hyperparameters
-    if args.model_name == 'distilbert':
-        hyper_params = {
-            'num_labels': args.num_labels,
-            'num_epochs': args.num_epochs,
-            'batch_size': args.batch_size,
-            'learning_rate': args.learning_rate,
-            'device': args.device,
-        }
-    elif args.model_name == 'random_forest':
-        hyper_params = {
-            'num_labels': args.num_labels,
-            'n_estimators': args.n_estimators,
-            'criterion': args.criterion,
-            'n_jobs': args.n_jobs
-        }
-    elif args.model_name == 'logistic_regression':
-        hyper_params = {
-            'num_labels': args.num_labels,
-            'n_jobs': args.n_jobs,
-        }
-    elif args.model_name == 'naive_bayes':
-        hyper_params = {
-            'num_labels': args.num_labels,
-        }
-    else:
-        raise ValueError("Invalid model name. Please enter one of ['distilbert','random_forest', 'logistic_regression', 'naive_bayes']")
-
+    hyper_params = {
+        'num_labels': args.num_labels,
+        'n_jobs': args.n_jobs,
+    }
 
     # Log in to Weights and Biases
     wandbdict = {
@@ -333,10 +270,10 @@ if __name__ == '__main__':
     train_data, sanity_data, gold_fraud_data = data_split(data)
 
     # Train the model
-    model = train_model(train_data, hyper_params, use_aug=args.use_aug, model_name = args.model_name)
+    model = train_model(train_data, hyper_params, use_aug=args.use_aug)
 
     # Test the model
-    f1_scores = test_model(train_data, sanity_data, gold_fraud_data, save_path)
+    f1_scores = test_and_save_model(train_data, sanity_data, gold_fraud_data, save_path)
 
     # Dump the logs to Weights and Biases
     dump_logs_to_wandb(hyper_params, f1_scores, save_path)
