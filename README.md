@@ -111,9 +111,9 @@ These are the training label splits before annotation
 
 ***
 
-## DATA ANNOTATION
+## Data Annotation
 
-### 1. AUTOMATED ML LABELING
+### 1. Automated ML Labeling
 
 The following heuristics are used to annotate labels for enron email data using the other two data sources:
 1. Phishing Model Annotation:  We are annotating mails from the Enron dataset using a high-precision model trained on the Phishing mails dataset. 
@@ -121,7 +121,7 @@ The following heuristics are used to annotate labels for enron email data using 
 
 The two ML Annotator models use Term Frequency Inverse Document Frequency (TFIDF) to embed the input text and make use of SVM models with Gaussian Kernel.
 
-### 2. EMAIL SIGNALS
+### 2. Email Signals
 
 Email Signal based heuristics are used to specifically filter and target suspicious emails for fraud labeling. The signals used are:
 Person Of Interest: There is a publicly available list of email addresses of employees who were liable for the massive data leak at Enron. These user mailboxes can have a higher chance of containing quality fraud emails.
@@ -143,7 +143,7 @@ The below table represents the distribution of the length of email bodies in ter
 | 75% | 4 |
 | max | 5486 |
 
-### 3. MANUAL INSPECTION
+### 3. Manual Inspection
 
 To ensure high-quality labels, we manually inspect the mismatch examples from ML Annotation to relabel the enron dataset.
 
