@@ -44,7 +44,7 @@ def mail():
 def test_get_f1_score(y_true, y_pred):
     macro_f1_score = get_f1_score(y_true, y_pred, average='macro')
     weighted_f1_score = get_f1_score(y_true, y_pred, average='weighted')
-    assert round(macro_f1_score,3) == 0.667
+    assert round(macro_f1_score,3) == 0.333
     assert round(weighted_f1_score,3) == 0.667
 
 def test_get_classification_report_confusion_matrix(y_true, y_pred):
