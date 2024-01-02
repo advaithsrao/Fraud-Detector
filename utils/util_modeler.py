@@ -34,7 +34,7 @@ def get_f1_score(
         float: The F1 score.
     """
 
-    return f1_score(y_true, y_pred, average='weighted')
+    return f1_score(y_true, y_pred, average=average)
 
 def get_classification_report_confusion_matrix(
     y_true: list[int],
