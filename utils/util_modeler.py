@@ -67,6 +67,8 @@ def evaluate_and_log(
         y_true (list[int]): The actual labels.
         y_pred (list[int]): The predicted labels.
         filename (str): The name of the log file.
+        experiment (wandb.run, optional): The wandb initialized run to use for output logging
+        id (list[str], optional): The ID column in the dataframe to use for backtracking mismatches
     """
     
     if id is None:
